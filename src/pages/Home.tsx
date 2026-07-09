@@ -20,14 +20,32 @@ export default function Home() {
   const [escuchando, setEscuchando] = useState(false);
   const [respuesta, setRespuesta] = useState<string | null>(null);
 
-  // Compone la respuesta hablada/escrita a partir del mejor resultado.
+  const fechaCorta = (iso: string) =>
+    new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+
+  // Compone la respuesta hablada/escrita. Si hay varios resultados (p. ej. el
+  // mismo objeto guardado en dos sitios distintos), los menciona todos con su
+  // fecha, para saber dónde está cada uno y cuál es el más reciente.
   const componerRespuesta = (r: Resultado[]): string => {
     if (r.length === 0) return 'No he encontrado nada guardado sobre eso.';
-    const it = r[0].item;
-    const donde = ubicacionTexto(it);
-    return donde
-      ? `${it.nombre} está en ${donde}.`
-      : `${it.nombre} está guardado, pero no anotaste dónde.`;
+
+    const describe = (res: Resultado) => {
+      const it = res.item;
+      const donde = ubicacionTexto(it) || 'sin ubicación anotada';
+      return `${it.nombre} en ${donde} (guardado el ${fechaCorta(it.creado)})`;
+    };
+
+    if (r.length === 1) {
+      const it = r[0].item;
+      const donde = ubicacionTexto(it);
+      return donde
+        ? `${it.nombre} está en ${donde}. Lo guardaste el ${fechaCorta(it.creado)}.`
+        : `${it.nombre} está guardado, pero no anotaste dónde. Lo guardaste el ${fechaCorta(it.creado)}.`;
+    }
+
+    const top = r.slice(0, 3).map(describe);
+    const extra = r.length > 3 ? `; y ${r.length - 3} más` : '';
+    return `He encontrado ${r.length}: ${top.join('; ')}${extra}.`;
   };
 
   const preguntarPorVoz = () => {
@@ -139,6 +157,7 @@ export default function Home() {
               <IonLabel>
                 <h2>{item.nombre}</h2>
                 <p><IonIcon icon={locationOutline} style={{ verticalAlign: '-2px', fontSize: 14 }} /> {ubicacionTexto(item) || 'Sin ubicación'}</p>
+                <p style={{ fontSize: 12, opacity: 0.7 }}>Guardado el {fechaCorta(item.creado)}</p>
               </IonLabel>
               {item.categoria && <IonNote slot="end">{item.categoria}</IonNote>}
             </IonItem>
