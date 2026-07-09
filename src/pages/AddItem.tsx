@@ -6,7 +6,7 @@ import {
 } from '@ionic/react';
 import { micOutline, cameraOutline, sparkles, checkmarkOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
-import { addItem, updateItem, subirFoto, knownHabitaciones, knownAlmacenajes } from '../db/db';
+import { addItem, updateItem, setEmbedding, subirFoto, knownHabitaciones, knownAlmacenajes } from '../db/db';
 import { extraerConcepto, reconocerFoto, generarEmbedding } from '../services/gemini';
 import { textoParaEmbedding } from '../services/search';
 
@@ -137,7 +137,7 @@ export default function AddItem() {
       // se seguirá encontrando por búsqueda de texto.
       try {
         const vec = await generarEmbedding(textoParaEmbedding(base));
-        if (vec.length) await updateItem(id, { embedding: vec });
+        if (vec.length) await setEmbedding(id, vec);
       } catch { /* no pasa nada: seguirá buscándose por texto */ }
 
       present({ message: 'Guardado', duration: 1200, color: 'success', position: 'top', icon: checkmarkOutline });

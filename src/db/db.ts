@@ -59,6 +59,16 @@ export async function updateItem(id: string, cambios: Partial<Item>): Promise<vo
   if (error) throw error;
 }
 
+// Guarda el embedding. pgvector vía la API de Supabase requiere el vector como
+// STRING "[...]" (no como array JS), o falla en silencio y se queda sin embedding.
+export async function setEmbedding(id: string, vec: number[]): Promise<void> {
+  const { error } = await supabase
+    .from('items')
+    .update({ embedding: JSON.stringify(vec), actualizado: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
 export async function deleteItem(id: string): Promise<void> {
   const item = await getItem(id);
   if (item?.foto_path) {

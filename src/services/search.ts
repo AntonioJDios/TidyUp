@@ -8,18 +8,26 @@ export interface Resultado {
   score: number; // 0..1 (mayor = más relevante)
 }
 
-// Búsqueda de texto simple (fallback sin IA / sin embeddings).
+// Normaliza para comparar: minúsculas y sin acentos ("eléctrica" -> "electrica").
+function norm(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+// Búsqueda de texto tolerante (fallback sin IA / sin embeddings): sin acentos y
+// por prefijo, de modo que "manta electrica" encuentre "mantita eléctrica".
 function coincideTexto(item: Item, q: string): boolean {
-  const hay = [
-    item.nombre,
-    item.habitacion,
-    item.almacenaje,
-    item.ubicacion,
-    item.categoria ?? '',
-    (item.etiquetas ?? []).join(' '),
-    item.notas ?? ''
-  ].join(' ').toLowerCase();
-  return q.toLowerCase().split(/\s+/).every((w) => hay.includes(w));
+  const tokens = norm([
+    item.nombre, item.habitacion, item.almacenaje, item.ubicacion,
+    item.categoria ?? '', (item.etiquetas ?? []).join(' '), item.notas ?? ''
+  ].join(' ')).split(/\s+/).filter(Boolean);
+
+  return norm(q).split(/\s+/).filter(Boolean).every((w) =>
+    tokens.some((t) => {
+      if (t.includes(w) || w.includes(t)) return true;
+      const min = Math.min(t.length, w.length);
+      return min >= 4 && t.slice(0, min) === w.slice(0, min); // prefijo común (manta/mantita)
+    })
+  );
 }
 
 // Búsqueda principal:
@@ -38,7 +46,8 @@ export async function buscar(query: string): Promise<Resultado[]> {
       const qVec = await generarEmbedding(q);
       if (qVec.length) {
         const { data, error } = await supabase.rpc('buscar_items', {
-          query_embedding: qVec,
+          // pgvector vía la API requiere el vector como string "[...]", no array.
+          query_embedding: JSON.stringify(qVec),
           h: hogar_id,
           limite: 20
         });
