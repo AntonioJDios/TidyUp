@@ -149,7 +149,7 @@ export default function Home() {
         )}
 
         <IonList>
-          {resultados.map(({ item }) => (
+          {resultados.map(({ item, score }) => (
             <IonItem key={item.id} button detail onClick={() => history.push(`/item/${item.id}`)}>
               {fotos[item.id]
                 ? <img src={fotos[item.id]} alt="" slot="start" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover' }} />
@@ -159,7 +159,14 @@ export default function Home() {
                 <p><IonIcon icon={locationOutline} style={{ verticalAlign: '-2px', fontSize: 14 }} /> {ubicacionTexto(item) || 'Sin ubicación'}</p>
                 <p style={{ fontSize: 12, opacity: 0.7 }}>Guardado el {fechaCorta(item.creado)}</p>
               </IonLabel>
-              {item.categoria && <IonNote slot="end">{item.categoria}</IonNote>}
+              <div slot="end" style={{ textAlign: 'right' }}>
+                {query && (
+                  <IonNote color={score >= 0.6 ? 'success' : 'medium'} style={{ fontWeight: 700 }}>
+                    {Math.round(score * 100)}%
+                  </IonNote>
+                )}
+                {item.categoria && <div><IonNote>{item.categoria}</IonNote></div>}
+              </div>
             </IonItem>
           ))}
         </IonList>
