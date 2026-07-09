@@ -42,6 +42,9 @@ export default async function handler(req: any, res: any) {
     res.status(401).json({ error: 'No autorizado.' });
     return;
   }
+  // Límite de llamadas de IA por usuario y día. Configurable con la variable de
+  // entorno IA_LIMITE_DIARIO en Vercel (default 1000 para pruebas; ~200 en público).
+  const limiteDiario = Number(process.env.IA_LIMITE_DIARIO) || 1000;
   try {
     const cuotaRes = await fetch(`${supabaseUrl}/rest/v1/rpc/consumir_cuota_ia`, {
       method: 'POST',
@@ -50,9 +53,7 @@ export default async function handler(req: any, res: any) {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      // Límite generoso para la fase de pruebas (solo uso propio). Al abrir al
-      // público, bajar a ~200 (suficiente para un usuario real, corta al abusón).
-      body: JSON.stringify({ limite: 1000 })
+      body: JSON.stringify({ limite: limiteDiario })
     });
     if (!cuotaRes.ok) {
       // Token inválido o la función rechazó (p. ej. no autenticado) -> 401.
