@@ -8,7 +8,9 @@
 // Modelos por defecto. Si Google publica versiones nuevas, cámbialos aquí
 // o desde la pantalla de Ajustes (se guardan en localStorage del navegador).
 const DEFAULT_TEXT_MODEL = 'gemini-2.5-flash';
-const DEFAULT_EMBED_MODEL = 'text-embedding-004';
+const DEFAULT_EMBED_MODEL = 'gemini-embedding-001';
+// Modelos deprecados que pudieran haber quedado guardados en localStorage.
+const EMBED_DEPRECADOS = ['text-embedding-004'];
 
 const TEXT_MODEL_STORAGE = 'gemini_text_model';
 const EMBED_MODEL_STORAGE = 'gemini_embed_model';
@@ -20,7 +22,9 @@ export function getTextModel(): string {
   return localStorage.getItem(TEXT_MODEL_STORAGE) || DEFAULT_TEXT_MODEL;
 }
 export function getEmbedModel(): string {
-  return localStorage.getItem(EMBED_MODEL_STORAGE) || DEFAULT_EMBED_MODEL;
+  const guardado = localStorage.getItem(EMBED_MODEL_STORAGE);
+  if (!guardado || EMBED_DEPRECADOS.includes(guardado)) return DEFAULT_EMBED_MODEL;
+  return guardado;
 }
 export function setModels(text: string, embed: string): void {
   localStorage.setItem(TEXT_MODEL_STORAGE, text || DEFAULT_TEXT_MODEL);

@@ -101,7 +101,7 @@ vercel.json             # rewrites: /sb/* -> supabase.co (proxy) ; resto -> inde
   (variable de entorno del servidor en Vercel, nunca en el cliente). Así nadie
   configura nada en su dispositivo. Solo los nombres de modelo viven en `localStorage`
   (`gemini_text_model`, `gemini_embed_model`); defaults `gemini-2.5-flash` (texto/visión)
-  y `text-embedding-004` (embeddings). Endpoint Google `v1beta`. `generateContent`
+  y `gemini-embedding-001` (embeddings, forzado a 768 dims para casar con `vector(768)`). Endpoint Google `v1beta`. `generateContent`
   fuerza `responseMimeType: application/json`. **Aviso:** `/api/gemini` no tiene auth
   → proxy abierto; aceptable para uso familiar, al abrir al público añadir login/rate-limiting.
 

@@ -56,7 +56,10 @@ export default async function handler(req: any, res: any) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: `models/${model}`,
-          content: { parts: [{ text: texto }] }
+          content: { parts: [{ text: texto }] },
+          // Forzamos 768 dims para que encajen con la columna vector(768) del esquema.
+          // (gemini-embedding-001 devuelve 3072 por defecto.)
+          outputDimensionality: 768
         })
       });
       const data = await r.json();

@@ -69,17 +69,21 @@ export async function buscar(query: string): Promise<Resultado[]> {
 
 // Regenera el embedding de los objetos que no lo tengan (p. ej. guardados cuando
 // la IA falló). Devuelve cuántos se han reindexado de los que faltaban.
-export async function reindexarItems(): Promise<{ hechos: number; faltaban: number }> {
+export async function reindexarItems(): Promise<{ hechos: number; faltaban: number; error?: string }> {
   const items = await allItems();
   const faltan = items.filter((i) => !i.embedding);
   let hechos = 0;
+  let error: string | undefined;
   for (const it of faltan) {
     try {
       const vec = await generarEmbedding(textoParaEmbedding(it));
       if (vec.length) { await setEmbedding(it.id, vec); hechos++; }
-    } catch { /* seguimos con el resto */ }
+      else if (!error) error = 'La IA devolvió un embedding vacío.';
+    } catch (e: any) {
+      if (!error) error = String(e?.message ?? e); // guardamos el primer error real
+    }
   }
-  return { hechos, faltaban: faltan.length };
+  return { hechos, faltaban: faltan.length, error };
 }
 
 // Texto que representa a un objeto para generar su embedding.
