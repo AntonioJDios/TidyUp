@@ -109,6 +109,33 @@ Frase: "${frase}"`;
   return obj || frase;
 }
 
+// Redacta la respuesta hablada teniendo en cuenta la CONFIANZA (score) de cada
+// candidato. La IA solo usa los datos dados (no inventa ubicaciones).
+export interface CandidatoRespuesta {
+  nombre: string;
+  ubicacion: string;   // "Dormitorio · Cómoda · encima" o "" si no hay
+  fecha: string;       // legible: "9 de julio"
+  confianza: number;   // 0..1
+}
+export async function redactarRespuestaUbicacion(
+  pregunta: string,
+  candidatos: CandidatoRespuesta[]
+): Promise<string> {
+  const prompt = `Eres el asistente de una app para encontrar cosas en casa. El usuario preguntó: "${pregunta}".
+Candidatos encontrados (con su confianza 0-1, ubicación y fecha de guardado):
+${JSON.stringify(candidatos)}
+
+Redacta una respuesta BREVE y natural en español para leerla en voz alta. Reglas:
+- Usa SOLO la información dada; NO inventes ubicaciones ni objetos.
+- Apuesta por el candidato de MAYOR confianza: di dónde está y cuándo lo guardó.
+- Si esa confianza no es muy alta (< 0.75) o hay varios candidatos, exprésalo con matiz ("no estoy del todo seguro", "puede que…") y sugiere mirar también en los otros sitios.
+- Si solo hay un candidato, no menciones alternativas.
+Responde SOLO JSON: {"respuesta":"..."}`;
+  const raw = await generateContent([{ text: prompt }]);
+  const r = parseJson<{ respuesta: string }>(raw).respuesta?.trim();
+  return r || '';
+}
+
 // Reconoce el objeto principal de una foto (dataURL base64) y sugiere datos.
 export async function reconocerFoto(dataUrl: string): Promise<ConceptoExtraido> {
   const [meta, base64] = dataUrl.split(',');

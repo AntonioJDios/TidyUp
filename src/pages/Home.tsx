@@ -9,7 +9,7 @@ import { useHistory } from 'react-router-dom';
 import { buscar, type Resultado } from '../services/search';
 import { ubicacionTexto, fotoUrl } from '../db/db';
 import { escuchar, hablar, reconocimientoDisponible } from '../services/voz';
-import { extraerObjetoBusqueda } from '../services/gemini';
+import { extraerObjetoBusqueda, redactarRespuestaUbicacion } from '../services/gemini';
 
 export default function Home() {
   const history = useHistory();
@@ -56,7 +56,22 @@ export default function Home() {
           try { objeto = await extraerObjetoBusqueda(frase); } catch { /* si falla, la frase entera */ }
           setQuery(objeto); // actualiza también la lista y muestra qué entendió
           const r = await buscar(objeto);
-          const texto = componerRespuesta(r);
+
+          // La IA redacta la respuesta teniendo en cuenta la confianza (score).
+          // Si no hay resultados o la IA falla, usamos la plantilla local.
+          let texto = componerRespuesta(r);
+          if (r.length > 0) {
+            try {
+              const candidatos = r.slice(0, 3).map((res) => ({
+                nombre: res.item.nombre,
+                ubicacion: ubicacionTexto(res.item),
+                fecha: fechaCorta(res.item.creado),
+                confianza: Number(res.score.toFixed(2))
+              }));
+              const redactada = await redactarRespuestaUbicacion(objeto, candidatos);
+              if (redactada) texto = redactada;
+            } catch { /* nos quedamos con la plantilla */ }
+          }
           setRespuesta(texto);
           hablar(texto);
         } finally {
