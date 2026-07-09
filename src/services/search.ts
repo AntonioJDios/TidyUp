@@ -33,12 +33,17 @@ function coincideTexto(item: Item, q: string): boolean {
 // Búsqueda principal:
 // - Embebe la consulta y busca por similitud coseno en el servidor (pgvector).
 // - Si falla o no hay embeddings, cae a búsqueda de texto local.
+// Umbral mínimo de similitud coseno (0..1). Por debajo, no se considera relevante.
+// Ajustable: súbelo si aparecen cosas no relacionadas, bájalo si se queda corto.
+const UMBRAL = 0.6;
+
 export async function buscar(query: string): Promise<Resultado[]> {
   const q = query.trim();
-  if (!q) {
-    const items = await allItems();
-    return items.map((item) => ({ item, score: 1 }));
-  }
+  const items = await allItems();
+  if (!q) return items.map((item) => ({ item, score: 1 }));
+
+  // Coincidencias de texto (recall literal: acentos/prefijos), siempre válidas.
+  const textuales = items.filter((i) => coincideTexto(i, q));
 
   const hogar_id = await getHogarActual();
   if (hogar_id) {
@@ -51,20 +56,25 @@ export async function buscar(query: string): Promise<Resultado[]> {
           h: hogar_id,
           limite: 20
         });
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           const filas = data as Array<Item & { score: number }>;
-          const relevantes = filas.filter((r) => r.score >= 0.55);
-          const base = relevantes.length > 0 ? relevantes : filas.slice(0, 5);
-          return base.map((r) => ({ item: r, score: r.score }));
+          // Solo lo que supera el umbral. Si nada lo supera, NO se rellena con
+          // "los menos malos": buscar "perro" sin perros no debe devolver la manta.
+          const semanticos = filas.filter((r) => r.score >= UMBRAL);
+          const ids = new Set(semanticos.map((r) => r.id));
+          const soloTexto = textuales
+            .filter((i) => !ids.has(i.id))
+            .map((item) => ({ item, score: 0.5 }));
+          return [...semanticos.map((r) => ({ item: r as Item, score: r.score })), ...soloTexto]
+            .sort((a, b) => b.score - a.score);
         }
       }
     } catch {
-      // Si la IA/RPC falla, caemos al texto.
+      // Si la IA/RPC falla, caemos solo a texto.
     }
   }
 
-  const items = await allItems();
-  return items.filter((i) => coincideTexto(i, q)).map((item) => ({ item, score: 1 }));
+  return textuales.map((item) => ({ item, score: 1 }));
 }
 
 // Regenera el embedding de los objetos que no lo tengan (p. ej. guardados cuando
