@@ -5,22 +5,28 @@ import {
 } from '@ionic/react';
 import { trashOutline, locationOutline } from 'ionicons/icons';
 import { useParams, useHistory } from 'react-router-dom';
-import { getItem, deleteItem, type Item } from '../db/db';
+import { getItem, deleteItem, fotoUrl, ubicacionTexto, type Item } from '../db/db';
 
 export default function ItemDetail() {
   const { id } = useParams<{ id: string }>();
   const history = useHistory();
   const [item, setItem] = useState<Item | undefined>();
+  const [foto, setFoto] = useState<string | undefined>();
   const [presentAlert] = useIonAlert();
 
-  useEffect(() => { getItem(Number(id)).then(setItem); }, [id]);
+  useEffect(() => {
+    getItem(id).then(async (it) => {
+      setItem(it);
+      if (it?.foto_path) setFoto(await fotoUrl(it.foto_path));
+    });
+  }, [id]);
 
   const borrar = () => {
     presentAlert({
       header: '¿Borrar este objeto?',
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
-        { text: 'Borrar', role: 'destructive', handler: async () => { await deleteItem(Number(id)); history.replace('/home'); } }
+        { text: 'Borrar', role: 'destructive', handler: async () => { await deleteItem(id); history.replace('/home'); } }
       ]
     });
   };
@@ -42,16 +48,25 @@ export default function ItemDetail() {
       <IonContent className="ion-padding">
         {item && (
           <>
-            {item.foto && (
+            {foto && (
               <div className="ion-text-center" style={{ marginBottom: 16 }}>
-                <img src={item.foto} alt={item.nombre} style={{ maxWidth: '80%', borderRadius: 12 }} />
+                <img src={foto} alt={item.nombre} style={{ maxWidth: '80%', borderRadius: 12 }} />
               </div>
             )}
             <h1 style={{ marginTop: 0 }}>{item.nombre}</h1>
             <p style={{ fontSize: 18 }}>
-              <IonIcon icon={locationOutline} style={{ verticalAlign: '-3px' }} /> {item.ubicacion || 'Sin ubicación'}
+              <IonIcon icon={locationOutline} style={{ verticalAlign: '-3px' }} /> {ubicacionTexto(item) || 'Sin ubicación'}
             </p>
             <IonList>
+              {item.habitacion && (
+                <IonItem><IonLabel>Habitación</IonLabel><IonText slot="end">{item.habitacion}</IonText></IonItem>
+              )}
+              {item.almacenaje && (
+                <IonItem><IonLabel>Almacenaje</IonLabel><IonText slot="end">{item.almacenaje}</IonText></IonItem>
+              )}
+              {item.ubicacion && (
+                <IonItem><IonLabel>Ubicación</IonLabel><IonText slot="end">{item.ubicacion}</IonText></IonItem>
+              )}
               {item.categoria && (
                 <IonItem><IonLabel>Categoría</IonLabel><IonText slot="end">{item.categoria}</IonText></IonItem>
               )}

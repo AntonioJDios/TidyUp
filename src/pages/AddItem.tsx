@@ -6,7 +6,7 @@ import {
 } from '@ionic/react';
 import { micOutline, cameraOutline, sparkles, checkmarkOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
-import { addItem, updateItem, knownLocations } from '../db/db';
+import { addItem, updateItem, subirFoto, knownHabitaciones, knownAlmacenajes } from '../db/db';
 import { extraerConcepto, reconocerFoto, generarEmbedding } from '../services/gemini';
 import { textoParaEmbedding } from '../services/search';
 
@@ -19,6 +19,8 @@ export default function AddItem() {
 
   const [texto, setTexto] = useState('');       // frase libre / dictado
   const [nombre, setNombre] = useState('');
+  const [habitacion, setHabitacion] = useState('');
+  const [almacenaje, setAlmacenaje] = useState('');
   const [ubicacion, setUbicacion] = useState('');
   const [categoria, setCategoria] = useState('');
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
@@ -27,11 +29,15 @@ export default function AddItem() {
 
   const [escuchando, setEscuchando] = useState(false);
   const [procesando, setProcesando] = useState(false);
-  const [ubicacionesPrevias, setUbicacionesPrevias] = useState<string[]>([]);
+  const [habitacionesPrevias, setHabitacionesPrevias] = useState<string[]>([]);
+  const [almacenajesPrevios, setAlmacenajesPrevios] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const recRef = useRef<any>(null);
 
-  useEffect(() => { knownLocations().then(setUbicacionesPrevias); }, []);
+  useEffect(() => {
+    knownHabitaciones().then(setHabitacionesPrevias).catch(() => {});
+    knownAlmacenajes().then(setAlmacenajesPrevios).catch(() => {});
+  }, []);
 
   const aviso = (msg: string, color = 'danger') =>
     present({ message: msg, duration: 2500, color, position: 'top' });
@@ -70,6 +76,8 @@ export default function AddItem() {
     try {
       const c = await extraerConcepto(frase);
       if (c.nombre) setNombre(c.nombre);
+      if (c.habitacion) setHabitacion(c.habitacion);
+      if (c.almacenaje) setAlmacenaje(c.almacenaje);
       if (c.ubicacion) setUbicacion(c.ubicacion);
       if (c.categoria) setCategoria(c.categoria);
       if (c.etiquetas?.length) setEtiquetas(c.etiquetas);
@@ -106,14 +114,32 @@ export default function AddItem() {
     if (!nombre.trim()) { aviso('Ponle al menos un nombre.'); return; }
     setProcesando(true);
     try {
-      const base = { nombre: nombre.trim(), ubicacion: ubicacion.trim(), categoria: categoria.trim(), etiquetas, notas: notas.trim(), foto };
+      const base = {
+        nombre: nombre.trim(),
+        habitacion: habitacion.trim(),
+        almacenaje: almacenaje.trim(),
+        ubicacion: ubicacion.trim(),
+        categoria: categoria.trim(),
+        etiquetas,
+        notas: notas.trim()
+      };
       const id = await addItem(base);
+
+      // Foto (si hay) -> Storage privado; guardamos solo la ruta.
+      if (foto) {
+        try {
+          const path = await subirFoto(id, foto);
+          await updateItem(id, { foto_path: path });
+        } catch { /* si falla la foto, el objeto igual queda guardado */ }
+      }
+
       // Embedding en segundo plano; no bloquea el guardado. Si falla, el objeto
       // se seguirá encontrando por búsqueda de texto.
       try {
         const vec = await generarEmbedding(textoParaEmbedding(base));
         if (vec.length) await updateItem(id, { embedding: vec });
       } catch { /* no pasa nada: seguirá buscándose por texto */ }
+
       present({ message: 'Guardado', duration: 1200, color: 'success', position: 'top', icon: checkmarkOutline });
       history.replace('/home');
     } catch { aviso('No se pudo guardar.'); }
@@ -176,17 +202,33 @@ export default function AddItem() {
             <IonInput value={nombre} placeholder="Pilas AA" onIonInput={(e) => setNombre(e.detail.value ?? '')} />
           </IonItem>
           <IonItem>
-            <IonLabel position="stacked">Ubicación</IonLabel>
-            <IonInput value={ubicacion} placeholder="Cajón del pasillo" onIonInput={(e) => setUbicacion(e.detail.value ?? '')} />
+            <IonLabel position="stacked">Habitación</IonLabel>
+            <IonInput value={habitacion} placeholder="Dormitorio" onIonInput={(e) => setHabitacion(e.detail.value ?? '')} />
           </IonItem>
-          {ubicacionesPrevias.length > 0 && (
+          {habitacionesPrevias.length > 0 && (
             <div className="ion-padding-start ion-padding-bottom">
               <IonText color="medium"><small>Reutilizar: </small></IonText>
-              {ubicacionesPrevias.slice(0, 8).map((u) => (
-                <IonChip key={u} onClick={() => setUbicacion(u)}>{u}</IonChip>
+              {habitacionesPrevias.slice(0, 8).map((u) => (
+                <IonChip key={u} onClick={() => setHabitacion(u)}>{u}</IonChip>
               ))}
             </div>
           )}
+          <IonItem>
+            <IonLabel position="stacked">Almacenaje</IonLabel>
+            <IonInput value={almacenaje} placeholder="Cómoda" onIonInput={(e) => setAlmacenaje(e.detail.value ?? '')} />
+          </IonItem>
+          {almacenajesPrevios.length > 0 && (
+            <div className="ion-padding-start ion-padding-bottom">
+              <IonText color="medium"><small>Reutilizar: </small></IonText>
+              {almacenajesPrevios.slice(0, 8).map((u) => (
+                <IonChip key={u} onClick={() => setAlmacenaje(u)}>{u}</IonChip>
+              ))}
+            </div>
+          )}
+          <IonItem>
+            <IonLabel position="stacked">Ubicación (dentro del almacenaje)</IonLabel>
+            <IonInput value={ubicacion} placeholder="Segundo cajón" onIonInput={(e) => setUbicacion(e.detail.value ?? '')} />
+          </IonItem>
           <IonItem>
             <IonLabel position="stacked">Categoría</IonLabel>
             <IonInput value={categoria} placeholder="Electrónica" onIonInput={(e) => setCategoria(e.detail.value ?? '')} />

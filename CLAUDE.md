@@ -18,11 +18,21 @@ Si la respuesta es sí, va detrás de una acción opcional, nunca en el camino p
 - **Ionic React 8** + **React 18** + **react-router-dom v5** (Ionic usa v5, no v6).
 - **Vite 5** + **TypeScript** (strict).
 - **PWA** vía `vite-plugin-pwa` (autoUpdate).
-- **Dexie 4** sobre IndexedDB para persistencia local (offline-first).
+- **Supabase** (Postgres + Auth + Storage + `pgvector`) como backend de datos.
+  Multiusuario: los datos se comparten por **hogar**. Requiere conexión (online).
 - **Google Gemini** vía REST, a través de una función serverless propia (`api/gemini.ts`),
   no directamente desde el navegador (así la clave no se expone).
-- **Vercel** para el deploy (estático + función serverless en `/api`).
+- **Vercel** para el deploy (estático + función serverless en `/api` + rewrites de proxy).
 - Iconos: `ionicons`.
+
+> **Proxy anti-bloqueo:** el navegador NO habla con `*.supabase.co` directamente
+> (redes corporativas lo bloquean). Habla con `/sb/*` (mismo origen) y Vercel/Vite
+> reenvían a Supabase por detrás (ver `vercel.json` y `vite.config.ts`). El cliente
+> de Supabase (`src/services/supabase.ts`) apunta a `${origin}/sb`.
+
+> **Nota histórica:** hubo una fase con Dexie/IndexedDB offline-first y BYOK (cada
+> usuario metía su clave). Se abandonó: la clave está en el servidor (`GEMINI_KEY`) y
+> los datos en Supabase. Ya no se usa Dexie.
 
 ## Comandos
 
@@ -39,36 +49,52 @@ npm run lint      # tsc --noEmit
 ```
 api/
   gemini.ts             # función serverless Vercel: proxy a Gemini (usa GEMINI_KEY del server)
+supabase/
+  schema.sql            # esquema BD (hogares/miembros/items+vector) + RLS + RPC + Storage. Ejecutar en SQL Editor.
 src/
   main.tsx              # bootstrap React
-  App.tsx               # IonApp + rutas (/home /add /item/:id /settings)
+  App.tsx               # gate de sesión+hogar; si ok -> IonApp + rutas
+  vite-env.d.ts         # tipos de import.meta.env (VITE_SUPABASE_*)
   theme/variables.css   # color primario #3b5bdb
-  db/db.ts              # Dexie: modelo Item + CRUD + knownLocations()
+  db/db.ts              # capa de datos Supabase: Item + CRUD + fotos(Storage) + ubicacionTexto()
   services/
+    supabase.ts         # cliente Supabase apuntando al proxy /sb
+    home.ts             # hogar actual: crear/unirse (RPC) + cache en localStorage
     gemini.ts           # IA (cliente): llama a /api/gemini; extraerConcepto, reconocerFoto, generarEmbedding
-    search.ts           # RAG: buscar() por coseno + fallback texto
+    search.ts           # RAG: RPC buscar_items (pgvector) + fallback texto; textoParaEmbedding
   pages/
+    Login.tsx           # login por código OTP por email
+    Onboarding.tsx      # crear hogar / unirse por código
     Home.tsx            # búsqueda + recientes + FAB "+"
     AddItem.tsx         # voz + foto + texto -> IA rellena campos -> guardar
     ItemDetail.tsx      # ver/borrar
-    Settings.tsx        # modelos de Gemini (localStorage); la clave NO, va en el server
+    Settings.tsx        # código de invitación del hogar + cerrar sesión + modelos IA
 public/                 # favicon.svg, icon-192.png, icon-512.png
-vercel.json             # rewrite SPA (todo -> index.html)
+vercel.json             # rewrites: /sb/* -> supabase.co (proxy) ; resto -> index.html (SPA)
 ```
 
 ## Cómo funciona
 
-- **Modelo de datos** (`db/db.ts`): `Item { nombre, ubicacion, categoria?,
-  etiquetas?, notas?, foto?(dataURL), embedding?(number[]), creado, actualizado }`.
+- **Auth** (`App.tsx` + `Login.tsx`): login por **código OTP** por email (no enlace
+  mágico, para esquivar el bloqueo corporativo de supabase.co). `App` hace de gate:
+  sin sesión -> Login; con sesión pero sin hogar -> Onboarding; si todo ok -> rutas.
+- **Hogar** (`home.ts`): espacio compartido. `crear_hogar`/`unirse_a_hogar` (RPC).
+  El hogar activo se cachea en `localStorage` (`hogar_id`). Compartir = pasar el
+  `codigo_invitacion` (visible en Ajustes) a tu pareja.
+- **Modelo de datos** (`db/db.ts`): `Item { id(uuid), nombre, habitacion, almacenaje,
+  ubicacion, categoria?, etiquetas?, notas?, foto_path?, embedding?, creado, actualizado }`.
+  La ubicación se descompone en habitacion -> almacenaje -> ubicacion (sitio dentro).
+  Todo protegido por RLS (solo ves lo de tu hogar). Fotos en Storage privado (`fotos`),
+  el item guarda solo la ruta; se muestran vía URL firmada (`fotoUrl`).
 - **Añadir** (`AddItem.tsx`):
   1. Voz: Web Speech API del navegador (`webkitSpeechRecognition`, `lang=es-ES`).
      Gratis, no consume cuota de IA. Al terminar, la transcripción va a `interpretar()`.
-  2. `interpretar(frase)` -> `extraerConcepto()` -> rellena nombre/ubicacion/categoria/etiquetas.
-  3. Foto: `<input type=file capture=environment>` -> dataURL -> `reconocerFoto()`.
-  4. Al guardar: se crea el Item y **después** se genera el embedding en segundo
-     plano (no bloquea el guardado). Si falla, el objeto igual se busca por texto.
-- **Buscar** (`search.ts`): si hay embeddings guardados, embebe la query y ordena
-  por similitud coseno (umbral 0.55, con fallback a top-5); si falla o no hay, texto.
+  2. `interpretar(frase)` -> `extraerConcepto()` -> rellena nombre/habitacion/almacenaje/ubicacion/categoria/etiquetas.
+  3. Foto: `<input type=file capture=environment>` -> dataURL -> `reconocerFoto()` (solo QUÉ es).
+  4. Al guardar: se crea el Item; **después** se sube la foto a Storage y se genera el
+     embedding, ambos en segundo plano (no bloquean). Si fallan, el objeto igual queda.
+- **Buscar** (`search.ts`): embebe la query y llama a la RPC `buscar_items` (coseno en
+  pgvector, umbral 0.55, fallback top-5). Si falla, búsqueda de texto local.
 - **IA** (`gemini.ts` + `api/gemini.ts`): el cliente **no** conoce la clave. Llama a
   la función serverless `/api/gemini`, que habla con Google usando `GEMINI_KEY`
   (variable de entorno del servidor en Vercel, nunca en el cliente). Así nadie
@@ -86,34 +112,36 @@ vercel.json             # rewrite SPA (todo -> index.html)
 - Ionic usa **react-router v5** — no migrar a v6 (rompe `IonRouterOutlet`).
 - Los campos de la petición a Gemini van en **camelCase** (`inlineData`, `mimeType`).
 - Toda llamada a Gemini pasa por `api/gemini.ts`; el cliente nunca llama a Google
-  directamente. Mantener ese único punto de entrada (facilita mover a Supabase luego).
-- El único backend es la función `/api/gemini`. El resto sigue siendo cliente/offline.
+  directamente. Mantener ese único punto de entrada.
+- El cliente **nunca** llama a `*.supabase.co` directamente: siempre vía el proxy
+  `/sb` (mismo origen). Motivo: redes corporativas bloquean el dominio de Supabase.
+- Cambios de esquema: editar `supabase/schema.sql` (idempotente) y volver a ejecutarlo
+  en el SQL Editor de Supabase. Mantener las políticas RLS al día.
+- Las variables públicas de Supabase se re-mapean a `VITE_*` en `vite.config.ts`
+  (no hace falta duplicarlas en Vercel). Nunca exponer `POSTGRES_*` ni service_role.
 
 ## Estado actual
 
-Hecho: scaffold completo, CRUD local, integración Gemini (texto/voz/foto/embeddings),
-búsqueda RAG con fallback, las 4 pantallas, PWA + iconos, README.
-**Build verificado** (`npm install && npm run build` OK, sin errores de tipos).
-Repo en GitHub (`AntonioJDios/TidyUp`, rama `main`).
-La IA ya pasa por la función serverless `/api/gemini` (clave en `GEMINI_KEY`).
+Hecho: app completa migrada a **Supabase** (auth OTP + hogar compartido + datos con
+RLS + fotos en Storage + búsqueda RAG con pgvector), IA vía `/api/gemini`, proxy `/sb`
+anti-bloqueo, modelo de ubicación en 3 niveles (habitación/almacenaje/ubicación).
+**Build verificado** (`npm run build` OK, sin errores de tipos). Repo en GitHub
+(`AntonioJDios/TidyUp`, rama `main`).
 
-**Pendiente de verificar**: probar el flujo real desplegado en Vercel con la
-`GEMINI_KEY` configurada (voz, foto, búsqueda) en un móvil real.
+**Pendiente de verificar (setup manual en Supabase + prueba real):**
+1. Ejecutar `supabase/schema.sql` en el SQL Editor de Supabase (una vez).
+2. Auth -> Email Templates -> plantilla "Magic Link": incluir `{{ .Token }}` para que
+   el email traiga el **código de 6 dígitos** (si no, no funciona el login OTP).
+3. Confirmar `GEMINI_KEY` en Vercel (facturación de Gemini activa; free tier no va en UE).
+4. Probar en el móvil el flujo completo: login -> crear hogar -> guardar (voz/foto) ->
+   buscar. Y que la pareja se une con el código de invitación.
 
 ## Próximos pasos sugeridos (en orden)
 
-1. Desplegar en Vercel (importar repo de GitHub) y configurar la variable de
-   entorno `GEMINI_KEY`. Probar el flujo real (voz, foto, búsqueda) en el móvil.
-2. Optimizar el bundle (1.25 MB): code-splitting / `manualChunks` (aviso de Vite).
-3. Empaquetar como app nativa con Capacitor:
-   ```bash
-   npm install @capacitor/core @capacitor/cli
-   npx cap init TidyUp com.tidyup.app
-   npm run build && npx cap add ios && npx cap add android
-   ```
-   Para la cámara nativa, considerar `@capacitor/camera` en vez del input HTML.
-4. Sincronización entre dispositivos (pareja/familia): migrar de solo-IndexedDB a
-   Supabase (`pgvector` para los embeddings) manteniendo el modo offline.
+1. Completar el setup manual de arriba y validar el flujo end-to-end en el móvil.
+2. Optimizar el bundle (~1.37 MB): code-splitting / `manualChunks` (aviso de Vite).
+3. Blindar el proxy `/api/gemini` con auth (verificar JWT de Supabase) — hoy es abierto.
+4. Empaquetar como app nativa con Capacitor (`@capacitor/camera` para la cámara).
 5. Etiquetas QR para cajas del trastero (escanear -> ver/editar contenido).
 6. Pulir diseño de pantallas y estados vacíos.
 

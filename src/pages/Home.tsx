@@ -7,11 +7,13 @@ import {
 import { settingsOutline, addOutline, cubeOutline, locationOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { buscar, type Resultado } from '../services/search';
+import { ubicacionTexto, fotoUrl } from '../db/db';
 
 export default function Home() {
   const history = useHistory();
   const [query, setQuery] = useState('');
   const [resultados, setResultados] = useState<Resultado[]>([]);
+  const [fotos, setFotos] = useState<Record<string, string>>({});
   const [cargando, setCargando] = useState(false);
   const [total, setTotal] = useState(0);
 
@@ -21,6 +23,15 @@ export default function Home() {
     setResultados(r);
     if (!q) setTotal(r.length);
     setCargando(false);
+    // Resolvemos las URLs firmadas de las fotos (privadas) en segundo plano.
+    const mapa: Record<string, string> = {};
+    await Promise.all(
+      r.filter(({ item }) => item.foto_path).map(async ({ item }) => {
+        const url = await fotoUrl(item.foto_path);
+        if (url) mapa[item.id] = url;
+      })
+    );
+    setFotos(mapa);
   }, []);
 
   useIonViewWillEnter(() => { refrescar(query); });
@@ -68,12 +79,12 @@ export default function Home() {
         <IonList>
           {resultados.map(({ item }) => (
             <IonItem key={item.id} button detail onClick={() => history.push(`/item/${item.id}`)}>
-              {item.foto
-                ? <img src={item.foto} alt="" slot="start" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover' }} />
+              {fotos[item.id]
+                ? <img src={fotos[item.id]} alt="" slot="start" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover' }} />
                 : <IonIcon icon={cubeOutline} slot="start" color="medium" />}
               <IonLabel>
                 <h2>{item.nombre}</h2>
-                <p><IonIcon icon={locationOutline} style={{ verticalAlign: '-2px', fontSize: 14 }} /> {item.ubicacion || 'Sin ubicación'}</p>
+                <p><IonIcon icon={locationOutline} style={{ verticalAlign: '-2px', fontSize: 14 }} /> {ubicacionTexto(item) || 'Sin ubicación'}</p>
               </IonLabel>
               {item.categoria && <IonNote slot="end">{item.categoria}</IonNote>}
             </IonItem>
