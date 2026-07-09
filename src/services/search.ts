@@ -13,21 +13,42 @@ function norm(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
+// Distancia de edición (Levenshtein) para tolerar erratas y variantes.
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  let cur = new Array(n + 1);
+  for (let i = 1; i <= m; i++) {
+    cur[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const coste = a[i - 1] === b[j - 1] ? 0 : 1;
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + coste);
+    }
+    [prev, cur] = [cur, prev];
+  }
+  return prev[n];
+}
+
+// ¿La palabra buscada casa con algún token del objeto? Substring en cualquier
+// dirección o distancia de edición pequeña (tolerante a variantes: mantita/mantota).
+function palabraCasa(w: string, tokens: string[]): boolean {
+  const tol = w.length <= 3 ? 0 : w.length <= 4 ? 1 : 2;
+  return tokens.some((t) =>
+    t.includes(w) || w.includes(t) || levenshtein(t, w) <= tol
+  );
+}
+
 // Búsqueda de texto tolerante (fallback sin IA / sin embeddings): sin acentos y
-// por prefijo, de modo que "manta electrica" encuentre "mantita eléctrica".
+// con fuzzy, de modo que "manta electrica" o "mantota" encuentren "mantita eléctrica".
 function coincideTexto(item: Item, q: string): boolean {
   const tokens = norm([
     item.nombre, item.habitacion, item.almacenaje, item.ubicacion,
     item.categoria ?? '', (item.etiquetas ?? []).join(' '), item.notas ?? ''
   ].join(' ')).split(/\s+/).filter(Boolean);
 
-  return norm(q).split(/\s+/).filter(Boolean).every((w) =>
-    tokens.some((t) => {
-      if (t.includes(w) || w.includes(t)) return true;
-      const min = Math.min(t.length, w.length);
-      return min >= 4 && t.slice(0, min) === w.slice(0, min); // prefijo común (manta/mantita)
-    })
-  );
+  return norm(q).split(/\s+/).filter(Boolean).every((w) => palabraCasa(w, tokens));
 }
 
 // Búsqueda principal:
