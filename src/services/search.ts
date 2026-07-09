@@ -1,4 +1,4 @@
-import { allItems, type Item } from '../db/db';
+import { allItems, setEmbedding, type Item } from '../db/db';
 import { generarEmbedding } from './gemini';
 import { supabase } from './supabase';
 import { getHogarActual } from './home';
@@ -65,6 +65,21 @@ export async function buscar(query: string): Promise<Resultado[]> {
 
   const items = await allItems();
   return items.filter((i) => coincideTexto(i, q)).map((item) => ({ item, score: 1 }));
+}
+
+// Regenera el embedding de los objetos que no lo tengan (p. ej. guardados cuando
+// la IA falló). Devuelve cuántos se han reindexado de los que faltaban.
+export async function reindexarItems(): Promise<{ hechos: number; faltaban: number }> {
+  const items = await allItems();
+  const faltan = items.filter((i) => !i.embedding);
+  let hechos = 0;
+  for (const it of faltan) {
+    try {
+      const vec = await generarEmbedding(textoParaEmbedding(it));
+      if (vec.length) { await setEmbedding(it.id, vec); hechos++; }
+    } catch { /* seguimos con el resto */ }
+  }
+  return { hechos, faltaban: faltan.length };
 }
 
 // Texto que representa a un objeto para generar su embedding.

@@ -3,8 +3,9 @@ import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonBackButton,
   IonButton, IonList, IonItem, IonLabel, IonInput, IonText, IonNote, IonIcon, useIonToast
 } from '@ionic/react';
-import { copyOutline, logOutOutline } from 'ionicons/icons';
+import { copyOutline, logOutOutline, refreshOutline } from 'ionicons/icons';
 import { getTextModel, getEmbedModel, setModels } from '../services/gemini';
+import { reindexarItems } from '../services/search';
 import { supabase } from '../services/supabase';
 import { getMisHogares, getHogarActual, type Hogar } from '../services/home';
 
@@ -30,6 +31,20 @@ export default function Settings() {
     if (!hogar) return;
     try { await navigator.clipboard.writeText(hogar.codigo_invitacion); } catch { /* ignore */ }
     present({ message: 'Código copiado', duration: 1200, color: 'success', position: 'top' });
+  };
+
+  const [reindexando, setReindexando] = useState(false);
+  const regenerar = async () => {
+    setReindexando(true);
+    try {
+      const { hechos, faltaban } = await reindexarItems();
+      present({
+        message: faltaban === 0 ? 'Todo estaba al día.' : `Reindexados ${hechos}/${faltaban} objetos.`,
+        duration: 2000, color: 'success', position: 'top'
+      });
+    } catch {
+      present({ message: 'No se pudo reindexar.', duration: 2000, color: 'danger', position: 'top' });
+    } finally { setReindexando(false); }
   };
 
   return (
@@ -58,6 +73,10 @@ export default function Settings() {
             </IonButton>
           </IonItem>
         </IonList>
+
+        <IonButton expand="block" fill="outline" style={{ marginTop: 12 }} disabled={reindexando} onClick={regenerar}>
+          <IonIcon slot="start" icon={refreshOutline} /> {reindexando ? 'Regenerando…' : 'Regenerar búsqueda (IA)'}
+        </IonButton>
 
         <IonButton expand="block" fill="outline" color="medium" style={{ marginTop: 12 }} onClick={() => supabase.auth.signOut()}>
           <IonIcon slot="start" icon={logOutOutline} /> Cerrar sesión
