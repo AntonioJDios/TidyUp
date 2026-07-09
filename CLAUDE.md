@@ -108,8 +108,9 @@ vercel.json             # rewrites: /sb/* -> supabase.co (proxy) ; resto -> inde
   configura nada en su dispositivo. Solo los nombres de modelo viven en `localStorage`
   (`gemini_text_model`, `gemini_embed_model`); defaults `gemini-2.5-flash` (texto/visión)
   y `gemini-embedding-001` (embeddings, forzado a 768 dims para casar con `vector(768)`). Endpoint Google `v1beta`. `generateContent`
-  fuerza `responseMimeType: application/json`. **Aviso:** `/api/gemini` no tiene auth
-  → proxy abierto; aceptable para uso familiar, al abrir al público añadir login/rate-limiting.
+  fuerza `responseMimeType: application/json`. **Auth:** `/api/gemini` exige un token de
+  sesión de Supabase válido (lo valida contra `/auth/v1/user`); sin él responde 401. Así
+  solo usuarios logueados gastan la clave. Pendiente opcional: rate limiting por usuario.
 
 ## Convenciones
 
@@ -147,7 +148,7 @@ anti-bloqueo, modelo de ubicación en 3 niveles (habitación/almacenaje/ubicaci�
 
 1. Completar el setup manual de arriba y validar el flujo end-to-end en el móvil.
 2. Optimizar el bundle (~1.37 MB): code-splitting / `manualChunks` (aviso de Vite).
-3. Blindar el proxy `/api/gemini` con auth (verificar JWT de Supabase) — hoy es abierto.
+3. Rate limiting por usuario en `/api/gemini` (ya exige login; falta limitar volumen).
 4. Empaquetar como app nativa con Capacitor (`@capacitor/camera` para la cámara).
 5. Etiquetas QR para cajas del trastero (escanear -> ver/editar contenido).
 6. Pulir diseño de pantallas y estados vacíos.

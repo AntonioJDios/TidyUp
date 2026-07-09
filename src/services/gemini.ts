@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 // Servicio de IA con Google Gemini.
 //
 // La clave NO vive en el cliente. Está en la variable de entorno GEMINI_KEY
@@ -17,6 +19,27 @@ const EMBED_MODEL_STORAGE = 'gemini_embed_model';
 
 // Endpoint de nuestra función serverless (mismo origen que la app).
 const API_PROXY = '/api/gemini';
+
+// Llama al proxy adjuntando el token de sesión de Supabase, para que la función
+// pueda comprobar que quien llama es un usuario logueado de la app (y no gastar
+// la clave de Gemini con peticiones anónimas de fuera).
+async function llamarProxy(body: unknown): Promise<any> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  const res = await fetch(API_PROXY, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`IA ${res.status}: ${t}`);
+  }
+  return res.json();
+}
 
 export function getTextModel(): string {
   return localStorage.getItem(TEXT_MODEL_STORAGE) || DEFAULT_TEXT_MODEL;
@@ -41,16 +64,7 @@ export interface ConceptoExtraido {
 }
 
 async function generateContent(parts: unknown[]): Promise<string> {
-  const res = await fetch(API_PROXY, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tipo: 'generar', model: getTextModel(), parts })
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`IA ${res.status}: ${t}`);
-  }
-  const data = await res.json();
+  const data = await llamarProxy({ tipo: 'generar', model: getTextModel(), parts });
   return data?.text ?? '';
 }
 
@@ -96,15 +110,6 @@ La foto solo dice QUÉ es el objeto, no dónde se guarda: deja "habitacion", "al
 
 // Genera el vector de embedding de un texto (para la búsqueda RAG).
 export async function generarEmbedding(texto: string): Promise<number[]> {
-  const res = await fetch(API_PROXY, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tipo: 'embed', model: getEmbedModel(), texto })
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`Embedding ${res.status}: ${t}`);
-  }
-  const data = await res.json();
+  const data = await llamarProxy({ tipo: 'embed', model: getEmbedModel(), texto });
   return data?.values ?? [];
 }
