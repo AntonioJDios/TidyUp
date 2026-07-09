@@ -160,6 +160,40 @@ as $$
 $$;
 
 -- ----------------------------------------------------------------------------
+--  RATE LIMITING de la IA: cuenta llamadas por usuario y día (anti-abuso).
+--  La función valida la sesión (auth.uid()) Y limita en una sola llamada.
+-- ----------------------------------------------------------------------------
+create table if not exists ia_uso (
+  user_id  uuid not null references auth.users(id) on delete cascade,
+  dia      date not null default current_date,
+  contador int  not null default 0,
+  primary key (user_id, dia)
+);
+alter table ia_uso enable row level security; -- solo la accede la función SECURITY DEFINER
+
+-- Suma 1 al uso del día del usuario actual y devuelve TRUE si sigue por debajo
+-- del límite. Si no hay sesión, lanza excepción (la función serverless -> 401).
+create or replace function consumir_cuota_ia(limite int default 150)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  actual int;
+begin
+  if uid is null then
+    raise exception 'no autenticado';
+  end if;
+  insert into ia_uso(user_id, dia, contador) values (uid, current_date, 1)
+    on conflict (user_id, dia) do update set contador = ia_uso.contador + 1
+    returning contador into actual;
+  return actual <= limite;
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
 --  STORAGE: bucket PRIVADO para las fotos. Ruta = <hogar_id>/<item_id>.jpg
 -- ----------------------------------------------------------------------------
 insert into storage.buckets (id, name, public)

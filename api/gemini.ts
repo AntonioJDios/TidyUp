@@ -27,9 +27,10 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  // --- Candado: solo usuarios logueados de la app pueden usar la clave. ---
-  // Validamos el token de sesión de Supabase contra su endpoint /auth/v1/user
-  // (esta función corre en Vercel, que no está bloqueado). Sin token válido -> 401.
+  // --- Candado + rate limiting en una sola llamada. ---
+  // La RPC consumir_cuota_ia valida la sesión (auth.uid()) y suma 1 al uso diario;
+  // devuelve false si el usuario superó el límite. Sin token válido -> 401.
+  // (Esta función corre en Vercel, que no está bloqueado por la red corporativa.)
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
@@ -42,11 +43,23 @@ export default async function handler(req: any, res: any) {
     return;
   }
   try {
-    const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      headers: { apikey: supabaseAnon, Authorization: `Bearer ${token}` }
+    const cuotaRes = await fetch(`${supabaseUrl}/rest/v1/rpc/consumir_cuota_ia`, {
+      method: 'POST',
+      headers: {
+        apikey: supabaseAnon,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ limite: 150 })
     });
-    if (!userRes.ok) {
+    if (!cuotaRes.ok) {
+      // Token inválido o la función rechazó (p. ej. no autenticado) -> 401.
       res.status(401).json({ error: 'Sesión no válida.' });
+      return;
+    }
+    const permitido = await cuotaRes.json();
+    if (permitido === false) {
+      res.status(429).json({ error: 'Has alcanzado el límite de uso de hoy. Inténtalo mañana.' });
       return;
     }
   } catch {
