@@ -50,7 +50,9 @@ export default async function handler(req: any, res: any) {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ limite: 50 })
+      // Límite generoso para la fase de pruebas (solo uso propio). Al abrir al
+      // público, bajar a ~200 (suficiente para un usuario real, corta al abusón).
+      body: JSON.stringify({ limite: 1000 })
     });
     if (!cuotaRes.ok) {
       // Token inválido o la función rechazó (p. ej. no autenticado) -> 401.
