@@ -98,6 +98,17 @@ Frase: "${texto}"`;
   return parseJson<ConceptoExtraido>(raw);
 }
 
+// De una pregunta en lenguaje natural, extrae SOLO el objeto/palabras clave a
+// buscar. "quiero buscar el ordenador" / "¿dónde puse las pilas AA?" -> "ordenador" / "pilas AA".
+export async function extraerObjetoBusqueda(frase: string): Promise<string> {
+  const prompt = `De esta frase, extrae SOLO el objeto o las palabras clave que la persona quiere encontrar en su casa, sin verbos ni relleno. Responde SOLO JSON: {"objeto":"..."}.
+Ejemplos: "quiero buscar el ordenador" -> {"objeto":"ordenador"}; "¿dónde he guardado las pilas AA?" -> {"objeto":"pilas AA"}; "a ver dónde metí el pasaporte" -> {"objeto":"pasaporte"}.
+Frase: "${frase}"`;
+  const raw = await generateContent([{ text: prompt }]);
+  const obj = parseJson<{ objeto: string }>(raw).objeto?.trim();
+  return obj || frase;
+}
+
 // Reconoce el objeto principal de una foto (dataURL base64) y sugiere datos.
 export async function reconocerFoto(dataUrl: string): Promise<ConceptoExtraido> {
   const [meta, base64] = dataUrl.split(',');

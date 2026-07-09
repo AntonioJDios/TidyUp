@@ -9,6 +9,7 @@ import { useHistory } from 'react-router-dom';
 import { buscar, type Resultado } from '../services/search';
 import { ubicacionTexto, fotoUrl } from '../db/db';
 import { escuchar, hablar, reconocimientoDisponible } from '../services/voz';
+import { extraerObjetoBusqueda } from '../services/gemini';
 
 export default function Home() {
   const history = useHistory();
@@ -54,12 +55,19 @@ export default function Home() {
     setEscuchando(true);
     escuchar(
       async (frase) => {
-        setEscuchando(false);
-        setQuery(frase); // actualiza también la lista
-        const r = await buscar(frase);
-        const texto = componerRespuesta(r);
-        setRespuesta(texto);
-        hablar(texto);
+        try {
+          // La IA identifica el objeto de la pregunta ("quiero buscar el
+          // ordenador" -> "ordenador") y buscamos solo eso.
+          let objeto = frase;
+          try { objeto = await extraerObjetoBusqueda(frase); } catch { /* si falla, la frase entera */ }
+          setQuery(objeto); // actualiza también la lista y muestra qué entendió
+          const r = await buscar(objeto);
+          const texto = componerRespuesta(r);
+          setRespuesta(texto);
+          hablar(texto);
+        } finally {
+          setEscuchando(false);
+        }
       },
       () => setEscuchando(false)
     );

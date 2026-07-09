@@ -19,7 +19,9 @@ const STOPWORDS = new Set([
   'donde', 'esta', 'estan', 'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas',
   'de', 'del', 'en', 'mi', 'mis', 'tu', 'tus', 'su', 'sus', 'se', 'que', 'cual',
   'cuales', 'y', 'o', 'a', 'lo', 'me', 'he', 'has', 'guarde', 'guardado', 'puse',
-  'deje', 'dejado', 'tengo', 'hay', 'estaba', 'encuentro', 'busco', 'buscar', 'esta'
+  'deje', 'dejado', 'tengo', 'hay', 'estaba', 'encuentro', 'busco', 'buscar', 'esta',
+  'quiero', 'quieres', 'necesito', 'encontrar', 'ver', 'busca', 'buscame', 'ensename',
+  'dime', 'saber', 'esta', 'para'
 ]);
 
 // Palabras "de contenido" de una consulta (quita relleno). Si todo era relleno,
