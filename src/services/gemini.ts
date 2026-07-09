@@ -7,7 +7,7 @@
 //
 // Modelos por defecto. Si Google publica versiones nuevas, cámbialos aquí
 // o desde la pantalla de Ajustes (se guardan en localStorage del navegador).
-const DEFAULT_TEXT_MODEL = 'gemini-2.0-flash';
+const DEFAULT_TEXT_MODEL = 'gemini-2.5-flash';
 const DEFAULT_EMBED_MODEL = 'text-embedding-004';
 
 const TEXT_MODEL_STORAGE = 'gemini_text_model';
