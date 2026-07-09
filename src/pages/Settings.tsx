@@ -37,10 +37,14 @@ export default function Settings() {
   const regenerar = async () => {
     setReindexando(true);
     try {
-      const { hechos, faltaban } = await reindexarItems();
+      const { hechos, faltaban, error } = await reindexarItems();
       present({
-        message: faltaban === 0 ? 'Todo estaba al día.' : `Reindexados ${hechos}/${faltaban} objetos.`,
-        duration: 2000, color: 'success', position: 'top'
+        message: error
+          ? `Reindexados ${hechos}/${faltaban}. Error: ${error}`
+          : (faltaban === 0 ? 'No hay objetos.' : `Reindexados ${hechos}/${faltaban} objetos.`),
+        duration: error ? 6000 : 2000,
+        color: error ? 'danger' : 'success',
+        position: 'top'
       });
     } catch {
       present({ message: 'No se pudo reindexar.', duration: 2000, color: 'danger', position: 'top' });
