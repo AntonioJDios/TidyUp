@@ -173,7 +173,7 @@ alter table ia_uso enable row level security; -- solo la accede la función SECU
 
 -- Suma 1 al uso del día del usuario actual y devuelve TRUE si sigue por debajo
 -- del límite. Si no hay sesión, lanza excepción (la función serverless -> 401).
-create or replace function consumir_cuota_ia(limite int default 150)
+create or replace function consumir_cuota_ia(limite int default 50)
 returns boolean
 language plpgsql
 security definer

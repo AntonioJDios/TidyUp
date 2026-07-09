@@ -113,7 +113,7 @@ vercel.json             # rewrites: /sb/* -> supabase.co (proxy) ; resto -> inde
 - **Auth + rate limiting** (`api/gemini.ts`): cada llamada adjunta el token de sesión
   de Supabase. La función llama a la RPC `consumir_cuota_ia(limite)` que **valida la
   sesión (auth.uid()) Y suma 1 al uso diario** en una sola llamada: sin token válido ->
-  401; si el usuario supera **150 llamadas/día** -> 429. Así solo usuarios logueados
+  401; si el usuario supera **50 llamadas/día** -> 429. Así solo usuarios logueados
   gastan la clave y ningún abusón dispara la factura. El contador vive en la tabla
   `ia_uso` (una fila por usuario y día).
 
