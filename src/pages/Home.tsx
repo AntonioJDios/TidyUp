@@ -4,10 +4,9 @@ import {
   IonIcon, IonSearchbar, IonList, IonItem, IonLabel, IonNote, IonFab, IonFabButton,
   IonText, useIonViewWillEnter
 } from '@ionic/react';
-import { settingsOutline, addOutline, cubeOutline, locationOutline, sparklesOutline } from 'ionicons/icons';
+import { settingsOutline, addOutline, cubeOutline, locationOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { buscar, type Resultado } from '../services/search';
-import { hasApiKey } from '../services/gemini';
 
 export default function Home() {
   const history = useHistory();
@@ -50,16 +49,6 @@ export default function Home() {
           placeholder="Buscar tijeras, pasaporte, pilas…"
           onIonInput={(e) => setQuery(e.detail.value ?? '')}
         />
-
-        {!hasApiKey() && (
-          <IonItem color="warning" lines="none" button onClick={() => history.push('/settings')}>
-            <IonIcon icon={sparklesOutline} slot="start" />
-            <IonLabel className="ion-text-wrap">
-              <strong>Activa la IA</strong>
-              <IonNote className="ion-text-wrap"> — añade tu clave de Gemini en Ajustes para voz, fotos y búsqueda inteligente.</IonNote>
-            </IonLabel>
-          </IonItem>
-        )}
 
         <div className="ion-padding-start ion-padding-top">
           <IonText color="medium">

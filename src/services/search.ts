@@ -1,5 +1,5 @@
 import { allItems, type Item } from '../db/db';
-import { generarEmbedding, hasApiKey } from './gemini';
+import { generarEmbedding } from './gemini';
 
 export interface Resultado {
   item: Item;
@@ -41,7 +41,7 @@ export async function buscar(query: string): Promise<Resultado[]> {
 
   const conVector = items.filter((i) => i.embedding && i.embedding.length > 0);
 
-  if (hasApiKey() && conVector.length > 0) {
+  if (conVector.length > 0) {
     try {
       const qVec = await generarEmbedding(q);
       const ranked = conVector

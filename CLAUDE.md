@@ -19,7 +19,9 @@ Si la respuesta es sí, va detrás de una acción opcional, nunca en el camino p
 - **Vite 5** + **TypeScript** (strict).
 - **PWA** vía `vite-plugin-pwa` (autoUpdate).
 - **Dexie 4** sobre IndexedDB para persistencia local (offline-first).
-- **Google Gemini** vía REST (fetch directo, sin SDK).
+- **Google Gemini** vía REST, a través de una función serverless propia (`api/gemini.ts`),
+  no directamente desde el navegador (así la clave no se expone).
+- **Vercel** para el deploy (estático + función serverless en `/api`).
 - Iconos: `ionicons`.
 
 ## Comandos
@@ -35,20 +37,23 @@ npm run lint      # tsc --noEmit
 ## Estructura
 
 ```
+api/
+  gemini.ts             # función serverless Vercel: proxy a Gemini (usa GEMINI_KEY del server)
 src/
   main.tsx              # bootstrap React
   App.tsx               # IonApp + rutas (/home /add /item/:id /settings)
   theme/variables.css   # color primario #3b5bdb
   db/db.ts              # Dexie: modelo Item + CRUD + knownLocations()
   services/
-    gemini.ts           # IA: extraerConcepto, reconocerFoto, generarEmbedding
+    gemini.ts           # IA (cliente): llama a /api/gemini; extraerConcepto, reconocerFoto, generarEmbedding
     search.ts           # RAG: buscar() por coseno + fallback texto
   pages/
     Home.tsx            # búsqueda + recientes + FAB "+"
     AddItem.tsx         # voz + foto + texto -> IA rellena campos -> guardar
     ItemDetail.tsx      # ver/borrar
-    Settings.tsx        # clave Gemini + modelos (localStorage)
+    Settings.tsx        # modelos de Gemini (localStorage); la clave NO, va en el server
 public/                 # favicon.svg, icon-192.png, icon-512.png
+vercel.json             # rewrite SPA (todo -> index.html)
 ```
 
 ## Cómo funciona
@@ -62,35 +67,44 @@ public/                 # favicon.svg, icon-192.png, icon-512.png
   3. Foto: `<input type=file capture=environment>` -> dataURL -> `reconocerFoto()`.
   4. Al guardar: se crea el Item y **después** se genera el embedding en segundo
      plano (no bloquea el guardado). Si falla, el objeto igual se busca por texto.
-- **Buscar** (`search.ts`): si hay clave y hay embeddings, embebe la query y ordena
-  por similitud coseno (umbral 0.55, con fallback a top-5); si no, búsqueda de texto.
-- **IA** (`gemini.ts`): clave y nombres de modelo en `localStorage`
-  (`gemini_api_key`, `gemini_text_model`, `gemini_embed_model`). Defaults:
-  `gemini-2.0-flash` (texto/visión) y `text-embedding-004` (embeddings).
-  Endpoint `v1beta`. `generateContent` fuerza `responseMimeType: application/json`.
+- **Buscar** (`search.ts`): si hay embeddings guardados, embebe la query y ordena
+  por similitud coseno (umbral 0.55, con fallback a top-5); si falla o no hay, texto.
+- **IA** (`gemini.ts` + `api/gemini.ts`): el cliente **no** conoce la clave. Llama a
+  la función serverless `/api/gemini`, que habla con Google usando `GEMINI_KEY`
+  (variable de entorno del servidor en Vercel, nunca en el cliente). Así nadie
+  configura nada en su dispositivo. Solo los nombres de modelo viven en `localStorage`
+  (`gemini_text_model`, `gemini_embed_model`); defaults `gemini-2.0-flash` (texto/visión)
+  y `text-embedding-004` (embeddings). Endpoint Google `v1beta`. `generateContent`
+  fuerza `responseMimeType: application/json`. **Aviso:** `/api/gemini` no tiene auth
+  → proxy abierto; aceptable para uso familiar, al abrir al público añadir login/rate-limiting.
 
 ## Convenciones
 
 - Todo el texto de UI y los comentarios, en **español**.
-- La clave de Gemini **nunca** en código ni en git: solo `localStorage`, vía Ajustes.
+- La clave de Gemini **nunca** en código ni en git: es la variable de entorno
+  `GEMINI_KEY` en Vercel (server-side). En local, `.env` (ignorado por git).
 - Ionic usa **react-router v5** — no migrar a v6 (rompe `IonRouterOutlet`).
 - Los campos de la petición a Gemini van en **camelCase** (`inlineData`, `mimeType`).
-- No introducir dependencias que necesiten backend: la app es 100% cliente/offline.
+- Toda llamada a Gemini pasa por `api/gemini.ts`; el cliente nunca llama a Google
+  directamente. Mantener ese único punto de entrada (facilita mover a Supabase luego).
+- El único backend es la función `/api/gemini`. El resto sigue siendo cliente/offline.
 
 ## Estado actual
 
 Hecho: scaffold completo, CRUD local, integración Gemini (texto/voz/foto/embeddings),
 búsqueda RAG con fallback, las 4 pantallas, PWA + iconos, README.
+**Build verificado** (`npm install && npm run build` OK, sin errores de tipos).
+Repo en GitHub (`AntonioJDios/TidyUp`, rama `main`).
+La IA ya pasa por la función serverless `/api/gemini` (clave en `GEMINI_KEY`).
 
-**Pendiente de verificar**: no se pudo ejecutar `npm install` ni `npm run build` en
-el entorno donde se generó (registro npm bloqueado). La revisión fue estática.
-**Primera tarea al retomar**: `npm install && npm run build` y arreglar cualquier
-error de tipos/compilación que aparezca.
+**Pendiente de verificar**: probar el flujo real desplegado en Vercel con la
+`GEMINI_KEY` configurada (voz, foto, búsqueda) en un móvil real.
 
 ## Próximos pasos sugeridos (en orden)
 
-1. Verificar build (`npm install && npm run build`) y corregir errores.
-2. Probar el flujo real con una clave de Gemini de verdad (voz, foto, búsqueda).
+1. Desplegar en Vercel (importar repo de GitHub) y configurar la variable de
+   entorno `GEMINI_KEY`. Probar el flujo real (voz, foto, búsqueda) en el móvil.
+2. Optimizar el bundle (1.25 MB): code-splitting / `manualChunks` (aviso de Vite).
 3. Empaquetar como app nativa con Capacitor:
    ```bash
    npm install @capacitor/core @capacitor/cli

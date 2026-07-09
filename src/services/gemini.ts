@@ -1,25 +1,21 @@
 // Servicio de IA con Google Gemini.
-// La clave se guarda SOLO en el dispositivo (localStorage), nunca en el código.
+//
+// La clave NO vive en el cliente. Está en la variable de entorno GEMINI_KEY
+// del servidor y solo la usa la función serverless `/api/gemini` (ver api/gemini.ts).
+// El navegador llama a esa función; nunca habla con Google directamente ni conoce
+// la clave. Así nadie tiene que configurar nada en su dispositivo.
 //
 // Modelos por defecto. Si Google publica versiones nuevas, cámbialos aquí
-// o desde la pantalla de Ajustes.
+// o desde la pantalla de Ajustes (se guardan en localStorage del navegador).
 const DEFAULT_TEXT_MODEL = 'gemini-2.0-flash';
 const DEFAULT_EMBED_MODEL = 'text-embedding-004';
-const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-const KEY_STORAGE = 'gemini_api_key';
 const TEXT_MODEL_STORAGE = 'gemini_text_model';
 const EMBED_MODEL_STORAGE = 'gemini_embed_model';
 
-export function getApiKey(): string {
-  return localStorage.getItem(KEY_STORAGE) ?? '';
-}
-export function setApiKey(key: string): void {
-  localStorage.setItem(KEY_STORAGE, key.trim());
-}
-export function hasApiKey(): boolean {
-  return getApiKey().length > 0;
-}
+// Endpoint de nuestra función serverless (mismo origen que la app).
+const API_PROXY = '/api/gemini';
+
 export function getTextModel(): string {
   return localStorage.getItem(TEXT_MODEL_STORAGE) || DEFAULT_TEXT_MODEL;
 }
@@ -39,25 +35,17 @@ export interface ConceptoExtraido {
 }
 
 async function generateContent(parts: unknown[]): Promise<string> {
-  const key = getApiKey();
-  if (!key) throw new Error('SIN_CLAVE');
-
-  const res = await fetch(`${API_BASE}/${getTextModel()}:generateContent?key=${key}`, {
+  const res = await fetch(API_PROXY, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts }],
-      generationConfig: { temperature: 0.1, responseMimeType: 'application/json' }
-    })
+    body: JSON.stringify({ tipo: 'generar', model: getTextModel(), parts })
   });
-
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`Gemini ${res.status}: ${t}`);
+    throw new Error(`IA ${res.status}: ${t}`);
   }
   const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-  return text;
+  return data?.text ?? '';
 }
 
 function parseJson<T>(raw: string): T {
@@ -96,22 +84,15 @@ export async function reconocerFoto(dataUrl: string): Promise<ConceptoExtraido> 
 
 // Genera el vector de embedding de un texto (para la búsqueda RAG).
 export async function generarEmbedding(texto: string): Promise<number[]> {
-  const key = getApiKey();
-  if (!key) throw new Error('SIN_CLAVE');
-
-  const model = getEmbedModel();
-  const res = await fetch(`${API_BASE}/${model}:embedContent?key=${key}`, {
+  const res = await fetch(API_PROXY, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: `models/${model}`,
-      content: { parts: [{ text: texto }] }
-    })
+    body: JSON.stringify({ tipo: 'embed', model: getEmbedModel(), texto })
   });
   if (!res.ok) {
     const t = await res.text();
     throw new Error(`Embedding ${res.status}: ${t}`);
   }
   const data = await res.json();
-  return data?.embedding?.values ?? [];
+  return data?.values ?? [];
 }

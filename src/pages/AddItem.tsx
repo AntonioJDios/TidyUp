@@ -7,7 +7,7 @@ import {
 import { micOutline, cameraOutline, sparkles, checkmarkOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { addItem, updateItem, knownLocations } from '../db/db';
-import { extraerConcepto, reconocerFoto, generarEmbedding, hasApiKey } from '../services/gemini';
+import { extraerConcepto, reconocerFoto, generarEmbedding } from '../services/gemini';
 import { textoParaEmbedding } from '../services/search';
 
 // Reconocimiento de voz del navegador (gratis, sin API).
@@ -66,11 +66,6 @@ export default function AddItem() {
 
   // --- IA: interpretar texto ---
   const interpretar = async (frase: string) => {
-    if (!hasApiKey()) {
-      // Sin IA: usamos la frase tal cual como nombre; el usuario completa a mano.
-      if (!nombre) setNombre(frase);
-      return;
-    }
     setProcesando(true);
     try {
       const c = await extraerConcepto(frase);
@@ -78,8 +73,10 @@ export default function AddItem() {
       if (c.ubicacion) setUbicacion(c.ubicacion);
       if (c.categoria) setCategoria(c.categoria);
       if (c.etiquetas?.length) setEtiquetas(c.etiquetas);
-    } catch (e: any) {
-      aviso(e?.message === 'SIN_CLAVE' ? 'Añade tu clave en Ajustes.' : 'La IA no pudo interpretar. Rellena a mano.');
+    } catch {
+      // Si la IA falla, no perdemos lo dictado: lo usamos como nombre.
+      if (!nombre) setNombre(frase);
+      aviso('La IA no pudo interpretar. Revisa los campos.');
     } finally { setProcesando(false); }
   };
 
@@ -92,16 +89,14 @@ export default function AddItem() {
     reader.onload = async () => {
       const dataUrl = reader.result as string;
       setFoto(dataUrl);
-      if (hasApiKey()) {
-        setProcesando(true);
-        try {
-          const c = await reconocerFoto(dataUrl);
-          if (c.nombre && !nombre) setNombre(c.nombre);
-          if (c.categoria && !categoria) setCategoria(c.categoria);
-          if (c.etiquetas?.length && etiquetas.length === 0) setEtiquetas(c.etiquetas);
-        } catch { aviso('No se pudo reconocer la foto.'); }
-        finally { setProcesando(false); }
-      }
+      setProcesando(true);
+      try {
+        const c = await reconocerFoto(dataUrl);
+        if (c.nombre && !nombre) setNombre(c.nombre);
+        if (c.categoria && !categoria) setCategoria(c.categoria);
+        if (c.etiquetas?.length && etiquetas.length === 0) setEtiquetas(c.etiquetas);
+      } catch { aviso('No se pudo reconocer la foto.'); }
+      finally { setProcesando(false); }
     };
     reader.readAsDataURL(file);
   };
@@ -113,13 +108,12 @@ export default function AddItem() {
     try {
       const base = { nombre: nombre.trim(), ubicacion: ubicacion.trim(), categoria: categoria.trim(), etiquetas, notas: notas.trim(), foto };
       const id = await addItem(base);
-      // Embedding en segundo plano (si hay IA); no bloquea el guardado.
-      if (hasApiKey()) {
-        try {
-          const vec = await generarEmbedding(textoParaEmbedding(base));
-          if (vec.length) await updateItem(id, { embedding: vec });
-        } catch { /* no pasa nada: seguirá buscándose por texto */ }
-      }
+      // Embedding en segundo plano; no bloquea el guardado. Si falla, el objeto
+      // se seguirá encontrando por búsqueda de texto.
+      try {
+        const vec = await generarEmbedding(textoParaEmbedding(base));
+        if (vec.length) await updateItem(id, { embedding: vec });
+      } catch { /* no pasa nada: seguirá buscándose por texto */ }
       present({ message: 'Guardado', duration: 1200, color: 'success', position: 'top', icon: checkmarkOutline });
       history.replace('/home');
     } catch { aviso('No se pudo guardar.'); }

@@ -3,3 +3,8 @@ dist
 dev-dist
 .DS_Store
 *.local
+
+# Variables de entorno (la clave GEMINI_KEY va en Vercel, nunca en git)
+.env
+.env.*
+.vercel
