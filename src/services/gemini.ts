@@ -82,12 +82,16 @@ Analiza esta frase en español y extrae la información. Responde SOLO con JSON 
 - "nombre": el objeto que se guarda (string, singular o plural según corresponda)
 - "habitacion": la habitación de la casa donde se guarda (ej. "dormitorio", "cocina", "salón", "trastero", "garaje"; "" si no se menciona)
 - "almacenaje": el mueble o contenedor donde se guarda (ej. "cómoda", "armario", "estantería", "cajonera", "caja"; "" si no se menciona)
-- "ubicacion": el sitio concreto dentro de ese almacenaje (ej. "segundo cajón", "balda de arriba", "estante inferior"; "" si no se menciona)
+- "ubicacion": el sitio o la POSICIÓN concreta respecto al almacenaje, tanto dentro como fuera (ej. "segundo cajón", "balda de arriba", "estante inferior", "encima", "debajo", "detrás", "al lado", "colgado"; "" si no se menciona)
 - "categoria": una categoría breve en español (ej. "Herramientas", "Documentos", "Electrónica", "Cocina", "Ropa"; "" si no aplica)
 - "etiquetas": array de 1 a 4 palabras clave útiles para buscarlo luego
 
-Ejemplo: "guardo el pasaporte en el segundo cajón de la cómoda del dormitorio" ->
+Interpreta la frase aunque esté mal transcrita o incompleta, deduciendo la intención.
+
+Ejemplo 1: "guardo el pasaporte en el segundo cajón de la cómoda del dormitorio" ->
 {"nombre":"pasaporte","habitacion":"dormitorio","almacenaje":"cómoda","ubicacion":"segundo cajón","categoria":"Documentos","etiquetas":["pasaporte","documento","identificación"]}
+Ejemplo 2: "he dejado los zapatos de deporte encima del armario del cuarto de dormir" ->
+{"nombre":"zapatos de deporte","habitacion":"dormitorio","almacenaje":"armario","ubicacion":"encima","categoria":"Calzado","etiquetas":["zapatos","deporte","zapatillas"]}
 
 Frase: "${texto}"`;
   const raw = await generateContent([{ text: prompt }]);
