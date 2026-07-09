@@ -63,7 +63,7 @@ src/
     gemini.ts           # IA (cliente): llama a /api/gemini; extraerConcepto, reconocerFoto, generarEmbedding
     search.ts           # RAG: RPC buscar_items (pgvector) + fallback texto; textoParaEmbedding
   pages/
-    Login.tsx           # login por código OTP por email
+    Login.tsx           # login por email + contraseña
     Onboarding.tsx      # crear hogar / unirse por código
     Home.tsx            # búsqueda + recientes + FAB "+"
     AddItem.tsx         # voz + foto + texto -> IA rellena campos -> guardar
@@ -75,9 +75,10 @@ vercel.json             # rewrites: /sb/* -> supabase.co (proxy) ; resto -> inde
 
 ## Cómo funciona
 
-- **Auth** (`App.tsx` + `Login.tsx`): login por **código OTP** por email (no enlace
-  mágico, para esquivar el bloqueo corporativo de supabase.co). `App` hace de gate:
-  sin sesión -> Login; con sesión pero sin hogar -> Onboarding; si todo ok -> rutas.
+- **Auth** (`App.tsx` + `Login.tsx`): login por **email + contraseña** (elegido por
+  simplicidad: no envía emails -> sin SMTP, y sin enlaces a supabase.co bloqueados).
+  Requiere desactivar "Confirm email" en Supabase para iniciar sesión al registrarse.
+  `App` hace de gate: sin sesión -> Login; con sesión pero sin hogar -> Onboarding; ok -> rutas.
 - **Hogar** (`home.ts`): espacio compartido. `crear_hogar`/`unirse_a_hogar` (RPC).
   El hogar activo se cachea en `localStorage` (`hogar_id`). Compartir = pasar el
   `codigo_invitacion` (visible en Ajustes) a tu pareja.
@@ -130,11 +131,11 @@ anti-bloqueo, modelo de ubicación en 3 niveles (habitación/almacenaje/ubicaci�
 
 **Pendiente de verificar (setup manual en Supabase + prueba real):**
 1. Ejecutar `supabase/schema.sql` en el SQL Editor de Supabase (una vez).
-2. Auth -> Email Templates -> plantilla "Magic Link": incluir `{{ .Token }}` para que
-   el email traiga el **código de 6 dígitos** (si no, no funciona el login OTP).
+2. Auth -> Providers -> Email: activado y **desactivar "Confirm email"** (para que el
+   registro con email+contraseña inicie sesión al momento, sin enviar correo).
 3. Confirmar `GEMINI_KEY` en Vercel (facturación de Gemini activa; free tier no va en UE).
-4. Probar en el móvil el flujo completo: login -> crear hogar -> guardar (voz/foto) ->
-   buscar. Y que la pareja se une con el código de invitación.
+4. Probar en el móvil el flujo completo: crear cuenta -> crear hogar -> guardar (voz/foto)
+   -> buscar. Y que la pareja se une con el código de invitación.
 
 ## Próximos pasos sugeridos (en orden)
 
