@@ -159,9 +159,12 @@ coste de storage; ahora mismo uso residual sin fotos).
 - **Freemium**: gratis hasta **~15 objetos**; **~5 €/año** por hogar para uso ilimitado
   (y, en su caso, fotos como extra premium). El límite de objetos **no está activado**
   todavía (ahora es de uso personal, sin límite). Se enciende al abrir al público.
-- **Economía**: uso residual (guardas ~1/semana, buscas ~1/mes) -> coste Gemini
-  **~0,002 $/usuario/mes**. Supabase/Vercel gratis aguantan **miles** de usuarios **sin
-  fotos**. El primer muro de coste eran las fotos (Storage 1 GB) -> por eso van a premium.
+- **Economía** (precios Gemini: 2.5-flash $0,075/M in + $0,30/M out; embedding-001
+  $0,025/M): **guardar ≈ $0,00008**, **buscar ≈ despreciable**. Uso residual ->
+  **~$0,0003/usuario/mes**; moderado -> **~$0,0025**. Una suscripción de 5 €/año cubre
+  ~67.000 guardados. El coste de IA es **despreciable**; lo caro a escala son los fijos
+  (Vercel/Supabase Pro) y las **fotos** (Storage) -> por eso las fotos van a premium.
+  Supabase/Vercel gratis aguantan **miles** de usuarios **sin fotos**.
 - **Riesgo real = picos/abuso**, no el uso normal -> por eso el rate limiting (ya hecho).
 - Cuando se cobre: **Vercel Pro** (uso comercial) + **Stripe/RevenueCat**. GDPR (datos UE).
 
