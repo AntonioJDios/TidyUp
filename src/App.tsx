@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import UpdatePrompt from './components/UpdatePrompt';
+import InstallPrompt from './components/InstallPrompt';
 
 /* Estilos base de Ionic (obligatorios) */
 import '@ionic/react/css/core.css';
@@ -72,7 +73,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <IonApp><Login /></IonApp>;
+    return <IonApp><InstallPrompt /><Login /></IonApp>;
   }
 
   if (!hogarId) {
@@ -82,6 +83,7 @@ export default function App() {
   return (
     <IonApp>
       <UpdatePrompt />
+      <InstallPrompt />
       <IonReactRouter>
         <IonRouterOutlet>
           <Route exact path="/home" component={Home} />
