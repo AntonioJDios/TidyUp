@@ -147,17 +147,17 @@ export async function reindexarItems(): Promise<{ hechos: number; faltaban: numb
 }
 
 // Texto que representa a un objeto para generar su embedding.
+// Solo describe QUÉ es el objeto (nombre, categoría, etiquetas, notas), NO dónde
+// está: se busca por el objeto, y la ubicación es la respuesta, no la clave. Meter
+// la ubicación diluía el match y provocaba falsos positivos (buscar "dormitorio"
+// devolvía todo lo guardado allí).
 export function textoParaEmbedding(item: {
-  nombre: string; habitacion: string; almacenaje: string; ubicacion: string;
-  categoria?: string; etiquetas?: string[]; notas?: string;
+  nombre: string; categoria?: string; etiquetas?: string[]; notas?: string;
 }): string {
   return [
-    `Objeto: ${item.nombre}`,
-    item.habitacion ? `Habitación: ${item.habitacion}` : '',
-    item.almacenaje ? `Almacenaje: ${item.almacenaje}` : '',
-    item.ubicacion ? `Ubicación: ${item.ubicacion}` : '',
-    item.categoria ? `Categoría: ${item.categoria}` : '',
-    item.etiquetas?.length ? `Etiquetas: ${item.etiquetas.join(', ')}` : '',
-    item.notas ? `Notas: ${item.notas}` : ''
+    item.nombre,
+    item.categoria ? item.categoria : '',
+    item.etiquetas?.length ? item.etiquetas.join(', ') : '',
+    item.notas ? item.notas : ''
   ].filter(Boolean).join('. ');
 }
