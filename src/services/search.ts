@@ -83,7 +83,7 @@ function coincideTexto(item: Item, q: string): boolean {
 // - Si falla o no hay embeddings, cae a búsqueda de texto local.
 // Umbral mínimo de similitud coseno (0..1). Por debajo, no se considera relevante.
 // Ajustable: súbelo si aparecen cosas no relacionadas, bájalo si se queda corto.
-const UMBRAL = 0.6;
+const UMBRAL = 0.7;
 
 export async function buscar(query: string): Promise<Resultado[]> {
   const q = query.trim();

@@ -24,29 +24,23 @@ export default function Home() {
   const fechaCorta = (iso: string) =>
     new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
 
-  // Compone la respuesta hablada/escrita. Si hay varios resultados (p. ej. el
-  // mismo objeto guardado en dos sitios distintos), los menciona todos con su
-  // fecha, para saber dónde está cada uno y cuál es el más reciente.
+  // Compone la respuesta hablada/escrita: apuesta por el mejor resultado y, si hay
+  // más candidatos (mismo objeto en otro sitio), los ofrece como alternativa.
   const componerRespuesta = (r: Resultado[]): string => {
     if (r.length === 0) return 'No he encontrado nada guardado sobre eso.';
 
-    const describe = (res: Resultado) => {
-      const it = res.item;
-      const donde = ubicacionTexto(it) || 'sin ubicación anotada';
-      return `${it.nombre} en ${donde} (guardado el ${fechaCorta(it.creado)})`;
-    };
+    const mejor = r[0].item;
+    const donde = ubicacionTexto(mejor) || 'un sitio que no anotaste';
+    let msg = `${mejor.nombre} parece estar en ${donde}. Lo guardaste el ${fechaCorta(mejor.creado)}.`;
 
-    if (r.length === 1) {
-      const it = r[0].item;
-      const donde = ubicacionTexto(it);
-      return donde
-        ? `${it.nombre} está en ${donde}. Lo guardaste el ${fechaCorta(it.creado)}.`
-        : `${it.nombre} está guardado, pero no anotaste dónde. Lo guardaste el ${fechaCorta(it.creado)}.`;
+    const otros = r.slice(1, 3).map((res) => {
+      const d = ubicacionTexto(res.item) || 'sin ubicación';
+      return `${d} (${fechaCorta(res.item.creado)})`;
+    });
+    if (otros.length > 0) {
+      msg += ` Si no está ahí, mira también en: ${otros.join('; ')}.`;
     }
-
-    const top = r.slice(0, 3).map(describe);
-    const extra = r.length > 3 ? `; y ${r.length - 3} más` : '';
-    return `He encontrado ${r.length}: ${top.join('; ')}${extra}.`;
+    return msg;
   };
 
   const preguntarPorVoz = () => {
@@ -169,7 +163,7 @@ export default function Home() {
               </IonLabel>
               <div slot="end" style={{ textAlign: 'right' }}>
                 {query && (
-                  <IonNote color={score >= 0.6 ? 'success' : 'medium'} style={{ fontWeight: 700 }}>
+                  <IonNote color={score >= 0.7 ? 'success' : 'medium'} style={{ fontWeight: 700 }}>
                     {(score * 100).toFixed(1)}%
                   </IonNote>
                 )}

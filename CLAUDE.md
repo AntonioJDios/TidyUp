@@ -96,7 +96,7 @@ vercel.json             # rewrites: /sb/* -> supabase.co (proxy) ; resto -> inde
   4. Al guardar: se crea el Item; **después** se sube la foto a Storage y se genera el
      embedding, ambos en segundo plano (no bloquean). Si fallan, el objeto igual queda.
 - **Buscar** (`search.ts`): embebe la query y llama a la RPC `buscar_items` (coseno en
-  pgvector). Solo devuelve lo que supera el **umbral 0.6** (sin relleno de "top-N"), más
+  pgvector). Solo devuelve lo que supera el **umbral 0.7** (sin relleno de "top-N"), más
   coincidencias de **texto fuzzy** (sin acentos, Levenshtein, quitando stopwords de
   preguntas). Si la IA/RPC falla, solo texto.
 - **Preguntar por voz** (`Home.tsx` + `voz.ts`): botón que escucha una pregunta
