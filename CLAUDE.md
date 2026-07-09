@@ -168,6 +168,18 @@ coste de storage; ahora mismo uso residual sin fotos).
 - **Riesgo real = picos/abuso**, no el uso normal -> por eso el rate limiting (ya hecho).
 - Cuando se cobre: **Vercel Pro** (uso comercial) + **Stripe/RevenueCat**. GDPR (datos UE).
 
+### Techo sin cobrar (cuántos usuarios aguanta gratis, sin fotos)
+- El cuello de botella **no es Gemini** (a decenas de miles = unas pocas decenas de $/mes),
+  sino la **BD de Supabase**: cada objeto con su embedding `vector(768)` ocupa ~6 KB
+  (vector + índice HNSW) -> 500 MB free ≈ ~85.000 objetos ≈ **~1.000-3.000 usuarios**
+  (según objetos/usuario). Ese es el primer muro.
+- **100% gratis (0 €)**: ~1.000-3.000 usuarios activos. Vercel Hobby vale porque sin
+  cobrar no es uso comercial. Gemini lo absorbes: ~$1-8/mes a esa escala.
+- **Solo con Supabase Pro (~25 $/mes)**: BD 8 GB (~1,3M objetos) + 100k MAU ->
+  **decenas de miles** de usuarios **sin cobrarles**. Siguiente muro: Auth MAU / banda Vercel.
+- Conclusión: cobrar **no es por coste** (es ridículo), sino cuando quieras autofinanciar
+  o sacar beneficio. Se puede tener miles de usuarios gratis indefinidamente.
+
 ## Próximos pasos sugeridos (en orden)
 
 1. Completar el setup manual de arriba y validar el flujo end-to-end en el móvil.
