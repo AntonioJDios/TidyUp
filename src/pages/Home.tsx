@@ -4,10 +4,11 @@ import {
   IonIcon, IonSearchbar, IonList, IonItem, IonLabel, IonNote, IonFab, IonFabButton,
   IonText, useIonViewWillEnter
 } from '@ionic/react';
-import { settingsOutline, addOutline, cubeOutline, locationOutline } from 'ionicons/icons';
+import { settingsOutline, addOutline, cubeOutline, locationOutline, micOutline, volumeHighOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { buscar, type Resultado } from '../services/search';
 import { ubicacionTexto, fotoUrl } from '../db/db';
+import { escuchar, hablar, reconocimientoDisponible } from '../services/voz';
 
 export default function Home() {
   const history = useHistory();
@@ -16,6 +17,35 @@ export default function Home() {
   const [fotos, setFotos] = useState<Record<string, string>>({});
   const [cargando, setCargando] = useState(false);
   const [total, setTotal] = useState(0);
+  const [escuchando, setEscuchando] = useState(false);
+  const [respuesta, setRespuesta] = useState<string | null>(null);
+
+  // Compone la respuesta hablada/escrita a partir del mejor resultado.
+  const componerRespuesta = (r: Resultado[]): string => {
+    if (r.length === 0) return 'No he encontrado nada guardado sobre eso.';
+    const it = r[0].item;
+    const donde = ubicacionTexto(it);
+    return donde
+      ? `${it.nombre} está en ${donde}.`
+      : `${it.nombre} está guardado, pero no anotaste dónde.`;
+  };
+
+  const preguntarPorVoz = () => {
+    if (!reconocimientoDisponible()) return;
+    setRespuesta(null);
+    setEscuchando(true);
+    escuchar(
+      async (frase) => {
+        setEscuchando(false);
+        setQuery(frase); // actualiza también la lista
+        const r = await buscar(frase);
+        const texto = componerRespuesta(r);
+        setRespuesta(texto);
+        hablar(texto);
+      },
+      () => setEscuchando(false)
+    );
+  };
 
   const refrescar = useCallback(async (q: string) => {
     setCargando(true);
@@ -60,6 +90,30 @@ export default function Home() {
           placeholder="Buscar tijeras, pasaporte, pilas…"
           onIonInput={(e) => setQuery(e.detail.value ?? '')}
         />
+
+        {reconocimientoDisponible() && (
+          <div className="ion-text-center" style={{ margin: '4px 0 8px' }}>
+            <IonButton
+              size="small" fill="outline"
+              color={escuchando ? 'danger' : 'primary'}
+              onClick={preguntarPorVoz}
+              disabled={escuchando}
+            >
+              <IonIcon slot="start" icon={micOutline} />
+              {escuchando ? 'Escuchando…' : 'Preguntar por voz'}
+            </IonButton>
+          </div>
+        )}
+
+        {respuesta && (
+          <IonItem color="light" lines="none" style={{ margin: '0 8px', borderRadius: 12 }}>
+            <IonIcon icon={volumeHighOutline} slot="start" color="primary" />
+            <IonLabel className="ion-text-wrap"><strong>{respuesta}</strong></IonLabel>
+            <IonButton slot="end" fill="clear" aria-label="Repetir" onClick={() => hablar(respuesta)}>
+              <IonIcon slot="icon-only" icon={volumeHighOutline} />
+            </IonButton>
+          </IonItem>
+        )}
 
         <div className="ion-padding-start ion-padding-top">
           <IonText color="medium">

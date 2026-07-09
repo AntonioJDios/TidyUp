@@ -61,11 +61,12 @@ src/
     supabase.ts         # cliente Supabase apuntando al proxy /sb
     home.ts             # hogar actual: crear/unirse (RPC) + cache en localStorage
     gemini.ts           # IA (cliente): llama a /api/gemini; extraerConcepto, reconocerFoto, generarEmbedding
-    search.ts           # RAG: RPC buscar_items (pgvector) + fallback texto; textoParaEmbedding
+    search.ts           # RAG: RPC buscar_items (pgvector, umbral 0.6) + fallback texto fuzzy (Levenshtein, stopwords); textoParaEmbedding
+    voz.ts              # Web Speech: escuchar() (STT) + hablar() (TTS)
   pages/
     Login.tsx           # login por email + contraseña
     Onboarding.tsx      # crear hogar / unirse por código
-    Home.tsx            # búsqueda + recientes + FAB "+"
+    Home.tsx            # búsqueda + preguntar por voz (responde con voz+texto) + recientes + FAB "+"
     AddItem.tsx         # voz + foto + texto -> IA rellena campos -> guardar
     ItemDetail.tsx      # ver/borrar
     Settings.tsx        # código de invitación del hogar + cerrar sesión + modelos IA
@@ -95,7 +96,12 @@ vercel.json             # rewrites: /sb/* -> supabase.co (proxy) ; resto -> inde
   4. Al guardar: se crea el Item; **después** se sube la foto a Storage y se genera el
      embedding, ambos en segundo plano (no bloquean). Si fallan, el objeto igual queda.
 - **Buscar** (`search.ts`): embebe la query y llama a la RPC `buscar_items` (coseno en
-  pgvector, umbral 0.55, fallback top-5). Si falla, búsqueda de texto local.
+  pgvector). Solo devuelve lo que supera el **umbral 0.6** (sin relleno de "top-N"), más
+  coincidencias de **texto fuzzy** (sin acentos, Levenshtein, quitando stopwords de
+  preguntas). Si la IA/RPC falla, solo texto.
+- **Preguntar por voz** (`Home.tsx` + `voz.ts`): botón que escucha una pregunta
+  ("¿dónde está la mantita eléctrica?"), busca, y **responde por voz (TTS) y en texto**
+  con la ubicación del mejor resultado.
 - **IA** (`gemini.ts` + `api/gemini.ts`): el cliente **no** conoce la clave. Llama a
   la función serverless `/api/gemini`, que habla con Google usando `GEMINI_KEY`
   (variable de entorno del servidor en Vercel, nunca en el cliente). Así nadie

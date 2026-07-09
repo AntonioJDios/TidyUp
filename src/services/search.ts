@@ -13,6 +13,23 @@ function norm(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
+// Palabras vacías de preguntas ("¿dónde está la...?") que no aportan a la búsqueda.
+// (Ya normalizadas, sin acentos.)
+const STOPWORDS = new Set([
+  'donde', 'esta', 'estan', 'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas',
+  'de', 'del', 'en', 'mi', 'mis', 'tu', 'tus', 'su', 'sus', 'se', 'que', 'cual',
+  'cuales', 'y', 'o', 'a', 'lo', 'me', 'he', 'has', 'guarde', 'guardado', 'puse',
+  'deje', 'dejado', 'tengo', 'hay', 'estaba', 'encuentro', 'busco', 'buscar', 'esta'
+]);
+
+// Palabras "de contenido" de una consulta (quita relleno). Si todo era relleno,
+// devuelve las originales para no quedarnos sin nada que buscar.
+function palabrasContenido(q: string): string[] {
+  const todas = norm(q).split(/\s+/).filter(Boolean);
+  const utiles = todas.filter((w) => !STOPWORDS.has(w));
+  return utiles.length > 0 ? utiles : todas;
+}
+
 // Distancia de edición (Levenshtein) para tolerar erratas y variantes.
 function levenshtein(a: string, b: string): number {
   const m = a.length, n = b.length;
@@ -48,7 +65,7 @@ function coincideTexto(item: Item, q: string): boolean {
     item.categoria ?? '', (item.etiquetas ?? []).join(' '), item.notas ?? ''
   ].join(' ')).split(/\s+/).filter(Boolean);
 
-  return norm(q).split(/\s+/).filter(Boolean).every((w) => palabraCasa(w, tokens));
+  return palabrasContenido(q).every((w) => palabraCasa(w, tokens));
 }
 
 // Búsqueda principal:
