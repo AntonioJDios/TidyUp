@@ -145,6 +145,13 @@ anti-bloqueo, modelo de ubicación en 3 niveles (habitación/almacenaje/ubicaci�
 4. Empaquetar como app nativa con Capacitor (`@capacitor/camera` para la cámara).
 5. Etiquetas QR para cajas del trastero (escanear -> ver/editar contenido).
 6. Pulir diseño de pantallas y estados vacíos.
+7. (Aparcado — solo si hay latencia real) Caché local de los objetos del hogar para
+   buscar sin ir a Supabase en cada consulta. NO por escala (la RPC ya filtra por
+   hogar_id con índice + RLS; miles de objetos de otros hogares no afectan). Diseño:
+   IndexedDB (no localStorage: los embeddings ~6 KB c/u lo desbordan), + trigger en BD
+   que suba `hogares.actualizado` al cambiar items -> el cliente compara ese timestamp
+   y re-descarga solo si cambió -> coseno en local. Ojo: seguiría necesitando 1 llamada
+   a Gemini por búsqueda (embeber la query).
 
 ## Trampas conocidas
 
