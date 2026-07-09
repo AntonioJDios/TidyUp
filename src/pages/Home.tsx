@@ -170,7 +170,7 @@ export default function Home() {
               <div slot="end" style={{ textAlign: 'right' }}>
                 {query && (
                   <IonNote color={score >= 0.6 ? 'success' : 'medium'} style={{ fontWeight: 700 }}>
-                    {Math.round(score * 100)}%
+                    {(score * 100).toFixed(1)}%
                   </IonNote>
                 )}
                 {item.categoria && <div><IonNote>{item.categoria}</IonNote></div>}
