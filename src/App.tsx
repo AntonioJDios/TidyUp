@@ -13,6 +13,7 @@ import ItemDetail from './pages/ItemDetail';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
+import UpdatePrompt from './components/UpdatePrompt';
 
 /* Estilos base de Ionic (obligatorios) */
 import '@ionic/react/css/core.css';
@@ -80,6 +81,7 @@ export default function App() {
 
   return (
     <IonApp>
+      <UpdatePrompt />
       <IonReactRouter>
         <IonRouterOutlet>
           <Route exact path="/home" component={Home} />

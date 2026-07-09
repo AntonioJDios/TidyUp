@@ -30,6 +30,14 @@ function palabrasContenido(q: string): string[] {
   return utiles.length > 0 ? utiles : todas;
 }
 
+// Aísla el objeto de una pregunta conservando acentos/mayúsculas, para EMBEBER
+// solo lo importante: "¿dónde he guardado el ordenador?" -> "ordenador".
+function limpiarConsulta(q: string): string {
+  const orig = q.trim().split(/\s+/).filter(Boolean);
+  const utiles = orig.filter((w) => !STOPWORDS.has(norm(w)));
+  return (utiles.length > 0 ? utiles : orig).join(' ');
+}
+
 // Distancia de edición (Levenshtein) para tolerar erratas y variantes.
 function levenshtein(a: string, b: string): number {
   const m = a.length, n = b.length;
@@ -86,7 +94,9 @@ export async function buscar(query: string): Promise<Resultado[]> {
   const hogar_id = await getHogarActual();
   if (hogar_id) {
     try {
-      const qVec = await generarEmbedding(q);
+      // Embebemos solo el objeto (sin "dónde he guardado el..."), que da mejor
+      // similitud que la frase entera.
+      const qVec = await generarEmbedding(limpiarConsulta(q));
       if (qVec.length) {
         const { data, error } = await supabase.rpc('buscar_items', {
           // pgvector vía la API requiere el vector como string "[...]", no array.
