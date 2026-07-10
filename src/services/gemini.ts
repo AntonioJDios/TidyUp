@@ -84,14 +84,14 @@ Analiza esta frase en español y extrae la información. Responde SOLO con JSON 
 - "almacenaje": el mueble o contenedor donde se guarda (ej. "cómoda", "armario", "estantería", "cajonera", "caja"; "" si no se menciona)
 - "ubicacion": el sitio o la POSICIÓN concreta respecto al almacenaje, tanto dentro como fuera (ej. "segundo cajón", "balda de arriba", "estante inferior", "encima", "debajo", "detrás", "al lado", "colgado"; "" si no se menciona)
 - "categoria": una categoría breve en español (ej. "Herramientas", "Documentos", "Electrónica", "Cocina", "Ropa"; "" si no aplica)
-- "etiquetas": array de 1 a 4 palabras clave útiles para buscarlo luego
+- "etiquetas": array de 2 a 6 palabras clave para buscarlo luego, INCLUYENDO sinónimos y abreviaturas comunes con las que la persona podría buscarlo (ej. "ordenador" -> ["ordenador","pc","portátil"]; "mando de la tele" -> ["mando","mando a distancia","control remoto"])
 
 Interpreta la frase aunque esté mal transcrita o incompleta, deduciendo la intención.
 
 Ejemplo 1: "guardo el pasaporte en el segundo cajón de la cómoda del dormitorio" ->
-{"nombre":"pasaporte","habitacion":"dormitorio","almacenaje":"cómoda","ubicacion":"segundo cajón","categoria":"Documentos","etiquetas":["pasaporte","documento","identificación"]}
-Ejemplo 2: "he dejado los zapatos de deporte encima del armario del cuarto de dormir" ->
-{"nombre":"zapatos de deporte","habitacion":"dormitorio","almacenaje":"armario","ubicacion":"encima","categoria":"Calzado","etiquetas":["zapatos","deporte","zapatillas"]}
+{"nombre":"pasaporte","habitacion":"dormitorio","almacenaje":"cómoda","ubicacion":"segundo cajón","categoria":"Documentos","etiquetas":["pasaporte","documento","dni","identificación"]}
+Ejemplo 2: "he dejado el ordenador encima del armario del cuarto de dormir" ->
+{"nombre":"ordenador","habitacion":"dormitorio","almacenaje":"armario","ubicacion":"encima","categoria":"Electrónica","etiquetas":["ordenador","pc","portátil","informática"]}
 
 Frase: "${texto}"`;
   const raw = await generateContent([{ text: prompt }]);
