@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonBackButton, IonText, IonIcon,
-  IonSegment, IonSegmentButton, IonLabel
+  IonSegment, IonSegmentButton, IonLabel, IonSearchbar
 } from '@ionic/react';
 import { gitNetworkOutline } from 'ionicons/icons';
 import { allItems, type Item } from '../db/db';
@@ -26,6 +26,9 @@ export default function Grafo() {
   const [nivel, setNivel] = useState<Nivel>('todo');
   const nivelRef = useRef<Nivel>('todo');
   const cambiarNivel = (n: Nivel) => { nivelRef.current = n; setNivel(n); };
+  const [q, setQ] = useState('');
+  const qRef = useRef('');
+  const buscarEnGrafo = (v: string) => { qRef.current = v; setQ(v); };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -43,10 +46,16 @@ export default function Grafo() {
     let raf = 0;
     let arrastrado: Nodo | null = null;
 
-    // Visibilidad según el nivel de detalle elegido (habitaciones / +muebles / todo).
+    // Visibilidad según el nivel elegido. Al buscar, se muestra todo para poder
+    // encontrar cualquier objeto aunque estés en "solo habitaciones".
     const rango = (t: Nodo['tipo']) => (t === 'hab' ? 0 : t === 'alm' ? 1 : 2);
     const maxRango = () => (nivelRef.current === 'hab' ? 0 : nivelRef.current === 'alm' ? 1 : 2);
-    const visible = (n: Nodo) => rango(n.tipo) <= maxRango();
+    const visible = (n: Nodo) => (qRef.current.trim() ? true : rango(n.tipo) <= maxRango());
+    const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const coincide = (n: Nodo) => {
+      const query = norm(qRef.current.trim());
+      return query.length > 0 && norm(n.label).includes(query);
+    };
 
     const construir = (its: Item[]) => {
       const map = new Map<string, Nodo>();
@@ -114,8 +123,11 @@ export default function Grafo() {
         if (!visible(e.a) || !visible(e.b)) continue;
         ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
       }
+      const hayBusqueda = qRef.current.trim().length > 0;
       for (const n of nodos) {
         if (!visible(n)) continue;
+        const marcado = coincide(n);
+        ctx.globalAlpha = hayBusqueda && !marcado ? 0.2 : 1;
         ctx.fillStyle = n.color;
         if (n.tipo === 'alm') {
           // Muebles/almacenajes: cuadrado (con esquinas redondeadas si el navegador puede).
@@ -128,11 +140,20 @@ export default function Grafo() {
           ctx.beginPath();
           ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill();
         }
+        // Anillo de resaltado si coincide con la búsqueda.
+        if (marcado) {
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r + 5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         ctx.fillStyle = colorTexto;
         ctx.font = n.tipo === 'hab' ? 'bold 13px sans-serif' : n.tipo === 'alm' ? '12px sans-serif' : '11px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(n.label, n.x, n.y + n.r + 12);
       }
+      ctx.globalAlpha = 1;
     };
 
     const bucle = () => { paso(); dibujar(); raf = requestAnimationFrame(bucle); };
@@ -209,6 +230,14 @@ export default function Grafo() {
             <IonSegmentButton value="alm"><IonLabel>+ Muebles</IonLabel></IonSegmentButton>
             <IonSegmentButton value="todo"><IonLabel>Todo</IonLabel></IonSegmentButton>
           </IonSegment>
+        </IonToolbar>
+        <IonToolbar>
+          <IonSearchbar
+            value={q}
+            debounce={0}
+            placeholder="Resaltar en el grafo…"
+            onIonInput={(e) => buscarEnGrafo(e.detail.value ?? '')}
+          />
         </IonToolbar>
       </IonHeader>
       <IonContent scrollY={false}>
