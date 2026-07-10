@@ -100,8 +100,18 @@ export default function Grafo() {
         ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
       }
       for (const n of nodos) {
-        ctx.beginPath(); ctx.fillStyle = n.color;
-        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = n.color;
+        if (n.tipo === 'alm') {
+          // Muebles/almacenajes: cuadrado (con esquinas redondeadas si el navegador puede).
+          const s = n.r;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === 'function') ctx.roundRect(n.x - s, n.y - s, s * 2, s * 2, 4);
+          else ctx.rect(n.x - s, n.y - s, s * 2, s * 2);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.fillStyle = colorTexto;
         ctx.font = n.tipo === 'hab' ? 'bold 13px sans-serif' : n.tipo === 'alm' ? '12px sans-serif' : '11px sans-serif';
         ctx.textAlign = 'center';
