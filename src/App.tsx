@@ -8,6 +8,7 @@ import { supabase } from './services/supabase';
 import { getHogarActual } from './services/home';
 
 import Home from './pages/Home';
+import Casa from './pages/Casa';
 import AddItem from './pages/AddItem';
 import ItemDetail from './pages/ItemDetail';
 import Settings from './pages/Settings';
@@ -87,6 +88,7 @@ export default function App() {
       <IonReactRouter>
         <IonRouterOutlet>
           <Route exact path="/home" component={Home} />
+          <Route exact path="/casa" component={Casa} />
           <Route exact path="/add" component={AddItem} />
           <Route exact path="/item/:id" component={ItemDetail} />
           <Route exact path="/settings" component={Settings} />

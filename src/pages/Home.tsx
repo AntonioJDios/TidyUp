@@ -4,7 +4,7 @@ import {
   IonIcon, IonSearchbar, IonList, IonItem, IonLabel, IonNote, IonFab, IonFabButton,
   IonText, useIonViewWillEnter
 } from '@ionic/react';
-import { settingsOutline, addOutline, cubeOutline, locationOutline, micOutline, volumeHighOutline } from 'ionicons/icons';
+import { settingsOutline, addOutline, cubeOutline, locationOutline, micOutline, volumeHighOutline, homeOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { buscar, type Resultado } from '../services/search';
 import { ubicacionTexto, fotoUrl } from '../db/db';
@@ -111,6 +111,9 @@ export default function Home() {
         <IonToolbar>
           <IonTitle>TidyUp</IonTitle>
           <IonButtons slot="end">
+            <IonButton onClick={() => history.push('/casa')} aria-label="Mi casa">
+              <IonIcon slot="icon-only" icon={homeOutline} />
+            </IonButton>
             <IonButton onClick={() => history.push('/settings')} aria-label="Ajustes">
               <IonIcon slot="icon-only" icon={settingsOutline} />
             </IonButton>

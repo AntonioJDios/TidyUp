@@ -67,6 +67,7 @@ src/
     Login.tsx           # login por email + contraseña
     Onboarding.tsx      # crear hogar / unirse por código
     Home.tsx            # búsqueda + preguntar por voz (responde con voz+texto) + recientes + FAB "+"
+    Casa.tsx            # "Mi casa": árbol automático habitación->mueble->sitio->objetos (desde los datos)
     AddItem.tsx         # voz + foto + texto -> IA rellena campos -> guardar
     ItemDetail.tsx      # ver/borrar
     Settings.tsx        # código de invitación del hogar + cerrar sesión + modelos IA
