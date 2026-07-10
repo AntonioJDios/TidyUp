@@ -194,6 +194,10 @@ coste de storage; ahora mismo uso residual sin fotos).
    volverlas absolutas (en nativo el HTML no se sirve desde Vercel).
 6. Etiquetas QR para cajas del trastero (escanear -> ver/editar contenido).
 7. Pulir diseño de pantallas y estados vacíos. Falta **editar** objetos (hoy: crear/borrar).
+8. (Divertido, no funcional) Vista "grafo" de la casa: habitaciones como nodos flotantes
+   conectados a sus muebles/objetos, arrastrables con dedo/ratón y con física (muelles +
+   repulsión + rebote). Hacer con motor de fuerzas propio ligero (sin librería pesada),
+   canvas/SVG + requestAnimationFrame. Los datos ya forman el grafo (hab->mueble->objeto).
 8. (Aparcado — solo si hay latencia real) Caché local de los objetos del hogar para
    buscar sin ir a Supabase en cada consulta. NO por escala (la RPC ya filtra por
    hogar_id con índice + RLS; miles de objetos de otros hogares no afectan). Diseño:
