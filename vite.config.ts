@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'TidyUp',
