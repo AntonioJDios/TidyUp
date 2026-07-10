@@ -5,7 +5,7 @@ import {
   IonSpinner, IonText, IonToast, useIonToast
 } from '@ionic/react';
 import { micOutline, cameraOutline, sparkles, checkmarkOutline } from 'ionicons/icons';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { addItem, updateItem, setEmbedding, subirFoto, knownHabitaciones, knownAlmacenajes } from '../db/db';
 import { extraerConcepto, reconocerFoto, generarEmbedding } from '../services/gemini';
 import { textoParaEmbedding } from '../services/search';
@@ -87,6 +87,20 @@ export default function AddItem() {
       aviso('La IA no pudo interpretar. Revisa los campos.');
     } finally { setProcesando(false); }
   };
+
+  // Texto compartido a la app ("Compartir a TidyUp" -> /add?text=...): prerellena
+  // y lo interpreta automáticamente.
+  const location = useLocation();
+  useEffect(() => {
+    const p = new URLSearchParams(location.search);
+    const compartido = (p.get('text') || p.get('title') || p.get('url') || '').trim();
+    if (compartido) {
+      setTexto(compartido);
+      interpretar(compartido);
+    }
+    // solo al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // --- FOTO ---
   const elegirFoto = () => fileRef.current?.click();
