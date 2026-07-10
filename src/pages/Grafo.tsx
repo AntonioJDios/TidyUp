@@ -20,7 +20,6 @@ const REP = 1600, SPRING = 0.02, GRAV = 0.004, DAMP = 0.88, VMAX = 12;
 export default function Grafo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [vacio, setVacio] = useState(false);
-  const [info, setInfo] = useState('cargando…'); // diagnóstico temporal
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -114,11 +113,8 @@ export default function Grafo() {
 
     // Arranca solo cuando hay tamaño real (evita el canvas a 0 en la transición).
     const intentarIniciar = () => {
-      setInfo(`canvas ${Math.round(W)}x${Math.round(H)} · items ${items?.length ?? '—'} · nodos ${nodos.length}`);
       if (iniciado || W === 0 || H === 0 || items === null || items.length === 0) return;
-      construir(items); iniciado = true;
-      setInfo(`canvas ${Math.round(W)}x${Math.round(H)} · nodos ${nodos.length}`);
-      bucle();
+      construir(items); iniciado = true; bucle();
     };
 
     const medir = () => {
@@ -193,9 +189,6 @@ export default function Grafo() {
               ref={canvasRef}
               style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none' }}
             />
-            <div style={{ position: 'absolute', top: 8, left: 8, fontSize: 11, opacity: 0.6, pointerEvents: 'none' }}>
-              {info}
-            </div>
           </div>
         )}
       </IonContent>
