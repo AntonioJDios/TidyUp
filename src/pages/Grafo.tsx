@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonBackButton, IonText, IonIcon
+  IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonBackButton, IonText, IonIcon,
+  IonSegment, IonSegmentButton, IonLabel
 } from '@ionic/react';
 import { gitNetworkOutline } from 'ionicons/icons';
 import { allItems, type Item } from '../db/db';
@@ -17,9 +18,14 @@ interface Arista { a: Nodo; b: Nodo; rest: number; }
 
 const REP = 1600, SPRING = 0.02, GRAV = 0.004, DAMP = 0.88, VMAX = 12;
 
+type Nivel = 'hab' | 'alm' | 'todo';
+
 export default function Grafo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [vacio, setVacio] = useState(false);
+  const [nivel, setNivel] = useState<Nivel>('todo');
+  const nivelRef = useRef<Nivel>('todo');
+  const cambiarNivel = (n: Nivel) => { nivelRef.current = n; setNivel(n); };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,6 +42,11 @@ export default function Grafo() {
     let iniciado = false;
     let raf = 0;
     let arrastrado: Nodo | null = null;
+
+    // Visibilidad según el nivel de detalle elegido (habitaciones / +muebles / todo).
+    const rango = (t: Nodo['tipo']) => (t === 'hab' ? 0 : t === 'alm' ? 1 : 2);
+    const maxRango = () => (nivelRef.current === 'hab' ? 0 : nivelRef.current === 'alm' ? 1 : 2);
+    const visible = (n: Nodo) => rango(n.tipo) <= maxRango();
 
     const construir = (its: Item[]) => {
       const map = new Map<string, Nodo>();
@@ -63,7 +74,9 @@ export default function Grafo() {
     const paso = () => {
       const cx = W / 2, cy = H / 2;
       for (let i = 0; i < nodos.length; i++) {
+        if (!visible(nodos[i])) continue;
         for (let j = i + 1; j < nodos.length; j++) {
+          if (!visible(nodos[j])) continue;
           const a = nodos[i], b = nodos[j];
           let dx = a.x - b.x, dy = a.y - b.y;
           let d2 = dx * dx + dy * dy; if (d2 < 1) d2 = 1;
@@ -73,13 +86,14 @@ export default function Grafo() {
         }
       }
       for (const e of aristas) {
+        if (!visible(e.a) || !visible(e.b)) continue;
         let dx = e.b.x - e.a.x, dy = e.b.y - e.a.y;
         const d = Math.sqrt(dx * dx + dy * dy) || 1;
         const f = SPRING * (d - e.rest), fx = (dx / d) * f, fy = (dy / d) * f;
         e.a.vx += fx; e.a.vy += fy; e.b.vx -= fx; e.b.vy -= fy;
       }
       for (const n of nodos) {
-        if (n === arrastrado) continue;
+        if (n === arrastrado || !visible(n)) continue;
         n.vx += (cx - n.x) * GRAV; n.vy += (cy - n.y) * GRAV;
         n.vx *= DAMP; n.vy *= DAMP;
         n.vx = Math.max(-VMAX, Math.min(VMAX, n.vx));
@@ -97,9 +111,11 @@ export default function Grafo() {
       ctx.strokeStyle = oscuro ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.3)';
       ctx.lineWidth = 1;
       for (const e of aristas) {
+        if (!visible(e.a) || !visible(e.b)) continue;
         ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
       }
       for (const n of nodos) {
+        if (!visible(n)) continue;
         ctx.fillStyle = n.color;
         if (n.tipo === 'alm') {
           // Muebles/almacenajes: cuadrado (con esquinas redondeadas si el navegador puede).
@@ -149,6 +165,7 @@ export default function Grafo() {
       const { x, y } = pos(e);
       let mejor: Nodo | null = null, md = Infinity;
       for (const n of nodos) {
+        if (!visible(n)) continue;
         const d = Math.hypot(n.x - x, n.y - y);
         if (d < n.r + 12 && d < md) { md = d; mejor = n; }
       }
@@ -185,6 +202,13 @@ export default function Grafo() {
         <IonToolbar>
           <IonButtons slot="start"><IonBackButton defaultHref="/casa" /></IonButtons>
           <IonTitle>Mi casa (grafo)</IonTitle>
+        </IonToolbar>
+        <IonToolbar>
+          <IonSegment value={nivel} onIonChange={(e) => cambiarNivel(e.detail.value as Nivel)}>
+            <IonSegmentButton value="hab"><IonLabel>Habitaciones</IonLabel></IonSegmentButton>
+            <IonSegmentButton value="alm"><IonLabel>+ Muebles</IonLabel></IonSegmentButton>
+            <IonSegmentButton value="todo"><IonLabel>Todo</IonLabel></IonSegmentButton>
+          </IonSegment>
         </IonToolbar>
       </IonHeader>
       <IonContent scrollY={false}>
