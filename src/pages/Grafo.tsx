@@ -13,6 +13,7 @@ import { allItems, type Item } from '../db/db';
 interface Nodo {
   id: string; tipo: 'hab' | 'alm' | 'obj'; label: string;
   x: number; y: number; vx: number; vy: number; r: number; color: string;
+  padre?: Nodo; // nodo del nivel superior (obj->mueble->habitación) para resaltar la ruta
 }
 interface Arista { a: Nodo; b: Nodo; rest: number; }
 
@@ -75,6 +76,7 @@ export default function Grafo() {
         const nh = add(`h:${hab}`, 'hab', hab, 24, '#3b5bdb');
         const na = add(`h:${hab}|a:${alm}`, 'alm', alm, 15, '#5c7cfa');
         const no = add(it.id, 'obj', it.nombre, 8, oscuro ? '#64748b' : '#cbd5e1');
+        na.padre = nh; no.padre = na; // cadena para resaltar la ruta al buscar
         aristas.push({ a: nh, b: na, rest: 95 });
         aristas.push({ a: na, b: no, rest: 55 });
       }
@@ -117,17 +119,36 @@ export default function Grafo() {
 
     const dibujar = () => {
       ctx.clearRect(0, 0, W, H);
-      ctx.strokeStyle = oscuro ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.3)';
-      ctx.lineWidth = 1;
+      const hayBusqueda = qRef.current.trim().length > 0;
+
+      // Ruta resaltada: cada nodo que coincide + toda su cadena de ancestros
+      // (objeto -> mueble -> habitación).
+      const ruta = new Set<string>();
+      if (hayBusqueda) {
+        for (const n of nodos) {
+          if (coincide(n)) { let c: Nodo | undefined = n; while (c) { ruta.add(c.id); c = c.padre; } }
+        }
+      }
+      const enRuta = (n: Nodo) => ruta.has(n.id);
+
+      // Aristas (las de la ruta, resaltadas; el resto atenuadas al buscar).
       for (const e of aristas) {
         if (!visible(e.a) || !visible(e.b)) continue;
+        const rutaEdge = hayBusqueda && enRuta(e.a) && enRuta(e.b);
+        if (rutaEdge) { ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2.5; }
+        else {
+          ctx.strokeStyle = oscuro ? 'rgba(148,163,184,0.35)' : 'rgba(100,116,139,0.3)';
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = hayBusqueda ? 0.12 : 1;
+        }
         ctx.beginPath(); ctx.moveTo(e.a.x, e.a.y); ctx.lineTo(e.b.x, e.b.y); ctx.stroke();
+        ctx.globalAlpha = 1;
       }
-      const hayBusqueda = qRef.current.trim().length > 0;
+
       for (const n of nodos) {
         if (!visible(n)) continue;
         const marcado = coincide(n);
-        ctx.globalAlpha = hayBusqueda && !marcado ? 0.2 : 1;
+        ctx.globalAlpha = hayBusqueda && !enRuta(n) ? 0.2 : 1;
         ctx.fillStyle = n.color;
         if (n.tipo === 'alm') {
           // Muebles/almacenajes: cuadrado (con esquinas redondeadas si el navegador puede).
