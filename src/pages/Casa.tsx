@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButtons, IonBackButton,
-  IonAccordion, IonAccordionGroup, IonItem, IonLabel, IonNote, IonIcon, IonText,
+  IonButton, IonAccordion, IonAccordionGroup, IonItem, IonLabel, IonNote, IonIcon, IonText,
   useIonViewWillEnter
 } from '@ionic/react';
-import { homeOutline, cubeOutline, fileTrayOutline, locationOutline } from 'ionicons/icons';
+import { homeOutline, cubeOutline, fileTrayOutline, locationOutline, gitNetworkOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { allItems, type Item } from '../db/db';
 
@@ -51,6 +51,11 @@ export default function Casa() {
         <IonToolbar>
           <IonButtons slot="start"><IonBackButton defaultHref="/home" /></IonButtons>
           <IonTitle>Mi casa</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={() => history.push('/grafo')} aria-label="Ver como grafo">
+              <IonIcon slot="icon-only" icon={gitNetworkOutline} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 

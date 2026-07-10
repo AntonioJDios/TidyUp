@@ -68,6 +68,7 @@ src/
     Onboarding.tsx      # crear hogar / unirse por código
     Home.tsx            # búsqueda + preguntar por voz (responde con voz+texto) + recientes + FAB "+"
     Casa.tsx            # "Mi casa": árbol automático habitación->mueble->sitio->objetos (desde los datos)
+    Grafo.tsx           # "Mi casa (grafo)": nodos con física (canvas), arrastrables y con rebote
     AddItem.tsx         # voz + foto + texto -> IA rellena campos -> guardar
     ItemDetail.tsx      # ver/borrar
     Settings.tsx        # código de invitación del hogar + cerrar sesión + modelos IA
@@ -194,10 +195,9 @@ coste de storage; ahora mismo uso residual sin fotos).
    volverlas absolutas (en nativo el HTML no se sirve desde Vercel).
 6. Etiquetas QR para cajas del trastero (escanear -> ver/editar contenido).
 7. Pulir diseño de pantallas y estados vacíos. Falta **editar** objetos (hoy: crear/borrar).
-8. (Divertido, no funcional) Vista "grafo" de la casa: habitaciones como nodos flotantes
-   conectados a sus muebles/objetos, arrastrables con dedo/ratón y con física (muelles +
-   repulsión + rebote). Hacer con motor de fuerzas propio ligero (sin librería pesada),
-   canvas/SVG + requestAnimationFrame. Los datos ya forman el grafo (hab->mueble->objeto).
+8. (Divertido, HECHO) Vista "grafo" de la casa (`Grafo.tsx`, ruta `/grafo`, botón en Casa):
+   habitaciones->muebles->objetos como nodos con física (repulsión + muelles + rebote),
+   arrastrables con dedo/ratón. Motor de fuerzas propio en canvas (sin librería).
 8. (Aparcado — solo si hay latencia real) Caché local de los objetos del hogar para
    buscar sin ir a Supabase en cada consulta. NO por escala (la RPC ya filtra por
    hogar_id con índice + RLS; miles de objetos de otros hogares no afectan). Diseño:
